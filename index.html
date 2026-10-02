@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Dinas - Login</title>
+    
+    <!-- OPTIMASI KECEPATAN: Preconnect untuk memuat Font lebih cepat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+    let maintenanceLoginProbeAktif = false;
+
+async function cekMaintenanceLogin() {
+    // Jangan menjalankan pemeriksaan baru jika pemeriksaan
+    // sebelumnya belum selesai.
+    if (maintenanceLoginProbeAktif) {
+        return;
+    }
+
+    maintenanceLoginProbeAktif = true;
+
+    try {
+        const response = await fetch(
+            'PHP/ping.php?t=' + Date.now(),
+            {
+                method: 'GET',
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }
+        );
+
+        // Error HTTP bukan berarti maintenance.
+        if (!response.ok) {
+            console.warn(
+                'Pemeriksaan server gagal:',
+                response.status
+            );
+
+            return;
+        }
+
+        const data = await response.json();
+
+        // Hanya status resmi dari server yang boleh
+        // mengarahkan pengguna ke maintenance.
+        if (
+            data &&
+            data.status === 'maintenance'
+        ) {
+            window.location.replace(
+                'maintenance.html'
+            );
+        }
+    } catch (error) {
+        // Internet terputus atau server gagal dibaca
+        // tidak dianggap sebagai maintenance.
+        console.warn(
+            'Pemeriksaan maintenance gagal:',
+            error
+        );
+    } finally {
+        maintenanceLoginProbeAktif = false;
+    }
+}
+
+cekMaintenanceLogin();
+
+setInterval(
+    cekMaintenanceLogin,
+    15000
+);
+</script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+        body { background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); display: flex; justify-content: center; align-items: center; height: 100vh; color: #334155; }
+        .login-wrapper { background: #ffffff; width: 100%; max-width: 420px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); text-align: center; }
+        .login-logo { width: 80px; height: auto; margin-bottom: 20px; }
+        .login-wrapper h2 { color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 5px; letter-spacing: -0.5px; }
+        .login-wrapper p { color: #64748b; font-size: 14px; margin-bottom: 30px; }
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #475569; }
+        .input-box { position: relative; width: 100%; }
+        .input-box input { width: 100%; padding: 14px 15px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; color: #0f172a; background: #f8fafc; transition: all 0.3s ease; }
+        .input-box input:focus { outline: none; border-color: #3b82f6; background: #ffffff; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+        .toggle-password { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 16px; opacity: 0.5; transition: 0.2s; user-select: none; }
+        .toggle-password:hover { opacity: 1; }
+        .btn-login { width: 100%; padding: 14px; background-color: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); margin-top: 10px; }
+        .btn-login:hover { background-color: #1d4ed8; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35); transform: translateY(-2px); }
+        .btn-login:active { transform: scale(0.98); }
+        .btn-login:disabled { background-color: #94a3b8; box-shadow: none; cursor: not-allowed; transform: none; }
+        .error-box { display: none; background-color: #fef2f2; color: #dc2626; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 20px; border: 1px solid #fecaca; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <img src="Image/logo-kalsel.png" alt="Logo" class="login-logo" onerror="this.style.display='none'">
+        <h2>Selamat Datang</h2>
+        <p>Silakan masuk ke akun Sistem Dinas Anda</p>
+
+        <div id="errorBox" class="error-box"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="identitas">NIP / Nama Lengkap</label>
+                <div class="input-box">
+                    <input type="text" id="identitas" required placeholder="Masukkan NIP atau Nama Anda" autocomplete="off">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-box">
+                    <input type="password" id="password" required placeholder="Masukkan password Anda">
+                    <span class="toggle-password" onclick="togglePasswordVisibility()">👁️</span>
+                </div>
+            </div>
+            <button type="submit" id="btnLogin" class="btn-login">Masuk Sistem</button>
+        </form>
+    </div>
+
+    <script>
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                passInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const identitasVal = document.getElementById('identitas').value.trim();
+            const passwordVal = document.getElementById('password').value;
+            const btnLogin = document.getElementById('btnLogin');
+            const errorBox = document.getElementById('errorBox');
+
+            errorBox.style.display = 'none';
+            errorBox.textContent = ''; // KEAMANAN XSS TERPASANG
+
+            btnLogin.innerHTML = "Memeriksa Kredensial... ⏳";
+            btnLogin.disabled = true;
+
+            try {
+                const response = await fetch('PHP/api_login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nip: identitasVal, password: passwordVal })
+                });
+                
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    sessionStorage.setItem('loggedInUser', JSON.stringify(result.user));
+                    // KODE BARU: Simpan CSRF Token
+                    sessionStorage.setItem('csrf_token', result.csrf_token);
+                    
+                    window.location.href = "app.html?view=forum";
+                } else {
+                    errorBox.style.display = 'block';
+                    errorBox.textContent = "❌ " + result.message; // KEAMANAN XSS TERPASANG
+                    btnLogin.textContent = "Masuk Sistem";
+                    btnLogin.disabled = false;
+                }
+            } catch (error) {
+                errorBox.style.display = 'block';
+                errorBox.textContent = "❌ Terjadi kesalahan jaringan. Silakan periksa koneksi internet atau server Anda.";
+                btnLogin.textContent = "Masuk Sistem";
+                btnLogin.disabled = false;
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+            const csrfToken = sessionStorage.getItem('csrf_token');
+
+            if (loggedInUser && loggedInUser.nama && csrfToken) {
+                window.location.href = 'app.html?view=forum';
+            } else if (loggedInUser && !csrfToken) {
+                sessionStorage.removeItem('loggedInUser');
+            }
+        });
+    </script>
+</body>
+</html>

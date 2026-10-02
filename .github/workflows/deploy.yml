@@ -1,0 +1,19 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy documentation
+        run: |
+          echo "Deploying Sistem Dinas documentation..."
+          # Note: This repo contains backend code, not meant for direct web hosting
+          # Documentation is in README.md and DOKUMENTASI_PERBAIKAN_CSRF.md

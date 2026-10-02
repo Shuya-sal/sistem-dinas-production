@@ -1,0 +1,44 @@
+# Large uploads and images
+Uploads/
+Users/Image/
+Image/
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# Temporary and log files
+*.log
+*.tmp
+*.bak
+*.backup
+~*
+
+# Sessions
+sessions/
+sess_*
+
+# Local secrets and backups (never deploy)
+.env
+.env.*
+!.env.example
+backupcode_coding-high/
+*_backup_*
+*.sql
+
+# Test caches
+__pycache__/
+*.pyc

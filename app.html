@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Dinas - Super App</title>
+    
+    <!-- KODE PWA BARU -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
+        }
+    </script>
+    
+    <!-- OPTIMASI KECEPATAN: Preconnect Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- CSS Wajib -->
+    <link rel="stylesheet" href="CSS/style.css?v=9">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    
+    <style>
+        #spa-content { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+
+    <!-- OPTIMASI KECEPATAN: Semua Script dipasang atribut DEFER (Non-Blocking) -->
+    <!-- Library Eksternal -->
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js" defer></script>
+
+    <!-- Script Internal (Ditumpuk di Head menggunakan Defer agar rapi) -->
+    <script src="Javascript/gembok.js?v=16" defer></script>
+    <script src="Javascript/dashboard.js" defer></script>
+    <script src="Javascript/pegawai.js" defer></script>
+    <script src="Javascript/tujuan.js" defer></script>
+    <script src="Javascript/penugasan.js?v=13" defer></script>
+    <script src="Javascript/Cetak/cetak_kopsurat.js" defer></script>
+    <script src="Javascript/Cetak/cetak_humas.js" defer></script>
+    <script src="Javascript/Cetak/cetak_sosper.js" defer></script>
+    <script src="Javascript/Cetak/cetak_sosrev.js" defer></script>
+    <script src="Javascript/Cetak/cetak_dewan.js" defer></script>
+    <script src="Javascript/Cetak/cetak_fasilitasihumas.js" defer></script>
+    <script src="Javascript/Cetak/cetak_dewanbanggar.js" defer></script>
+    <script src="Javascript/Cetak/cetak_stafbanggar.js" defer></script>
+    <script src="Javascript/forum.js?v=15" defer></script>
+    <script src="Javascript/profile.js?v=14" defer></script>
+</head>
+<body>
+    <div class="container">
+        <!-- TOP BAR PERMANEN -->
+        <div class="top-bar no-print">
+            <div class="user-info">
+                <img src="Image/default.jpg" id="topProfilePic" class="top-profile-img" onerror="this.onerror=null; this.src='Image/default.jpg';">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="topProfileName" class="top-profile-name">Memuat...</div>
+                        <span id="topProfileRole" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;"></span>
+                    </div>
+                    <div style="font-size: 11px; color: #27ae60; margin-top: 2px; font-weight: bold; display: flex; align-items: center;">
+                        <span class="online-dot"></span> <span id="onlineCountText">Sedang aktif</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="notif-wrapper" onclick="toggleNotifikasi(event)" title="Pemberitahuan">
+                    🔔
+                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                    <div class="notif-menu" id="notifMenu">
+                        <div class="notif-header">Pemberitahuan Baru</div>
+                        <div class="notif-body" id="notifBody">
+                            <div class="notif-empty">Tidak ada pemberitahuan baru</div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logoutSistem()" class="btn-logout">🚪 Keluar</button>
+            </div>
+        </div>
+
+        <!-- MENU NAVIGASI PERMANEN -->
+        <div class="nav-menu no-print" id="mainNav" style="margin-top: 20px;">
+            <button class="nav-btn" id="navDonaturBtn" onclick="bukaDashboardDonatur()" style="display: none; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">👑 Panel Tag Lencana</button>
+            <a href="javascript:void(0)" class="nav-btn" data-target="dashboard.html" onclick="navigasiSPA('dashboard.html', this)">📊 Dashboard</a>
+            <a href="javascript:void(0)" class="nav-btn" data-target="pegawai.html" onclick="navigasiSPA('pegawai.html', this)">👤 Data Pegawai</a>
+            <a href="javascript:void(0)" class="nav-btn" data-target="tujuan.html" onclick="navigasiSPA('tujuan.html', this)">📍 Tujuan & Biaya</a>
+            <a href="javascript:void(0)" class="nav-btn" data-target="penugasan.html" onclick="navigasiSPA('penugasan.html', this)">✈️ Penugasan Dinas</a>
+            <a href="javascript:void(0)" class="nav-btn" data-target="forum.html" onclick="navigasiSPA('forum.html', this)" style="background-color: #f39c12; color: white; border-color: #f39c12;">💬 Forum Sosial</a>
+        </div>
+
+        <!-- AREA KONTEN DINAMIS (KOTAK KOSONG SPA) -->
+        <div id="spa-content">
+            <div style="text-align: center; padding: 50px; color: #64748b;">
+                <span class="spinner"></span> Menyiapkan Sistem Super App...
+            </div>
+        </div>
+        
+        <div id="printTemplate" class="print-only"></div>
+    </div>
+
+    <!-- GLOBAL WIDGETS PERMANEN -->
+    <div id="privateChatWidget" class="private-chat-widget no-print">
+        <button id="chatToggleBtn" class="chat-toggle-btn" onclick="toggleChatWindow()">
+            💬 Obrolan Privat <span id="totalUnreadBadge" class="chat-badge" style="display:none;">0</span>
+        </button>
+        
+        <div id="chatWindow" class="chat-window" style="display:none;">
+            <div id="chatContactsView" style="display:flex; flex-direction:column; height:100%;">
+                <div class="chat-header">Pilih Pegawai</div>
+                <div style="padding: 10px; background: white; border-bottom: 1px solid #e2e8f0;">
+                    <input type="text" id="searchChatContact" placeholder="🔍 Cari nama pegawai..." style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 20px; outline: none; font-size: 13px; background: #f8fafc; box-sizing: border-box;">
+                </div>
+                <div class="chat-body" id="chatContactsList">
+                    <div style="text-align:center; padding:20px; color:#94a3b8;">Memuat kontak...</div>
+                </div>
+            </div>
+            
+            <div id="chatConversationView" style="display:none; flex-direction:column; height:100%;">
+                <div class="chat-header" style="background: #3498db;">
+                    <button onclick="backToContacts()" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">⬅️</button>
+                    <span id="chatActiveName" style="font-weight:bold; margin-left:10px; flex:1; text-align:left;">Nama</span>
+                </div>
+                <div class="chat-body chat-messages" id="chatMessagesList"></div>
+                <div class="chat-footer" style="align-items: center;">
+                    <label for="chatImageInput" style="cursor: pointer; margin-right: 10px; font-size: 24px;" title="Kirim Gambar">📷</label>
+                    <input type="file" id="chatImageInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="uploadImageChat(this)">
+                    <input type="text" id="chatInputMessage" placeholder="Tulis pesan rahasia..." autocomplete="new-password" spellcheck="false" onkeypress="if(event.key === 'Enter') sendPrivateMessage()">
+                    <button id="btnSendChat" onclick="sendPrivateMessage()">Kirim</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mediaModal" class="media-modal">
+        <span class="close-modal" onclick="closeMediaModal()">&times;</span>
+        <div id="modalContentWrapper" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;"></div>
+    </div>
+</body>
+</html>

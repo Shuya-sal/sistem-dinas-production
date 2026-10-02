@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum Diskusi - Sistem Dinas</title>
+    <link rel="stylesheet" href="CSS/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar no-print">
+            <div class="user-info">
+                <img src="Image/default.jpg" id="topProfilePic" class="top-profile-img" onerror="this.onerror=null; this.src='Image/default.jpg';" alt="Foto">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="topProfileName" class="top-profile-name">Nama Pegawai</div>
+                        <span id="topProfileRole" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;"></span>
+                    </div>
+                    <div style="font-size: 11px; color: #27ae60; margin-top: 2px; font-weight: bold; display: flex; align-items: center;">
+                        <span class="online-dot"></span> <span id="onlineCountText">Sedang aktif</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="notif-wrapper" onclick="toggleNotifikasi(event)" title="Pemberitahuan Komentar">
+                    🔔
+                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                    <div class="notif-menu" id="notifMenu">
+                        <div class="notif-header">Pemberitahuan Baru</div>
+                        <div class="notif-body" id="notifBody">
+                            <div class="notif-empty">Tidak ada pemberitahuan baru</div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logoutSistem()" class="btn-logout">🚪 Keluar</button>
+            </div>
+        </div>
+        
+        <h1>Forum Diskusi Pegawai</h1>
+
+        <div class="nav-menu no-print">
+            <a href="dashboard.html" class="nav-btn active">📊 Dashboard</a>
+            <a href="pegawai.html" class="nav-btn">👤 Data Pegawai</a>
+            <a href="tujuan.html" class="nav-btn">📍 Tujuan & Biaya</a>
+            <a href="penugasan.html" class="nav-btn">✈️ Penugasan Dinas</a>
+            <a href="forum.html" class="nav-btn" style="background-color: #f39c12; color: white; border-color: #f39c12;">💬 Forum Sosial</a>
+        </div>
+
+        <div class="feed-container">
+            <div class="create-post-box">
+                <form id="postForm">
+                    <div class="create-post-header">
+                        <img src="Image/default.jpg" id="postAvatar" onerror="this.onerror=null; this.src='Image/default.jpg';">
+                        <div class="create-post-input">
+                            <textarea id="postText" rows="3" placeholder="Bagikan dokumentasi atau informasi perjalanan dinas Anda di sini..."></textarea>
+                            <input type="url" id="postVideoLink" class="video-link-input" placeholder="🔗 Lampirkan Link Video (YouTube / MP4)...">
+                            <div class="preview-area" id="previewArea">
+                                <button type="button" class="btn-remove-preview" title="Hapus semua lampiran" onclick="hapusMedia()">X</button>
+                                <div id="mediaContainer" class="media-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="create-post-actions">
+                        <label class="file-upload-label">
+                            📷 Lampirkan Foto
+                            <input type="file" id="postMedia" accept="image/*" multiple style="display: none;" onchange="previewFiles(this)">
+                        </label>
+                        <small style="color:#e74c3c; font-size: 11px; margin-left: 10px;">(Maks 5 Foto. Ukuran per foto: 10MB)</small>
+                        <button type="submit" class="btn btn-save" style="border-radius: 20px; padding: 10px 25px;">Kirim Postingan</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="feedBody"></div>
+            
+            <div class="loading-scroll" id="loadingScroll">
+                <span class="spinner"></span> Menarik data postingan terdahulu...
+            </div>
+        </div>
+    </div>
+
+    <div id="privateChatWidget" class="private-chat-widget no-print">
+        <button id="chatToggleBtn" class="chat-toggle-btn" onclick="toggleChatWindow()">
+            💬 Obrolan Privat <span id="totalUnreadBadge" class="chat-badge" style="display:none;">0</span>
+        </button>
+        
+        <div id="chatWindow" class="chat-window" style="display:none;">
+            <div id="chatContactsView" style="display:flex; flex-direction:column; height:100%;">
+                <div class="chat-header">Pilih Pegawai</div>
+                
+                <div style="padding: 10px; background: white; border-bottom: 1px solid #e2e8f0;">
+                    <input type="text" id="searchChatContact" placeholder="🔍 Cari nama pegawai..." style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 20px; outline: none; font-size: 13px; background: #f8fafc; box-sizing: border-box;">
+                </div>
+                <div class="chat-body" id="chatContactsList">
+                    <div style="text-align:center; padding:20px; color:#94a3b8;">Memuat kontak...</div>
+                </div>
+            </div>
+            
+            <div id="chatConversationView" style="display:none; flex-direction:column; height:100%;">
+                <div class="chat-header" style="background: #3498db;">
+                    <button onclick="backToContacts()" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">⬅️</button>
+                    <span id="chatActiveName" style="font-weight:bold; margin-left:10px; flex:1; text-align:left;">Nama</span>
+                </div>
+                <div class="chat-body chat-messages" id="chatMessagesList">
+                    </div>
+                <div class="chat-footer" style="align-items: center;">
+                    <label for="chatImageInput" style="cursor: pointer; margin-right: 10px; font-size: 24px;" title="Kirim Gambar">📷</label>
+                    <input type="file" id="chatImageInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="uploadImageChat(this)">
+                    
+                    <input type="text" id="chatInputMessage" placeholder="Tulis pesan rahasia..." onkeypress="if(event.key === 'Enter') sendPrivateMessage()" autocomplete="off">
+                    <button id="btnSendChat" onclick="sendPrivateMessage()">Kirim</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="mediaModal" class="media-modal">
+        <span class="close-modal" onclick="closeMediaModal()">&times;</span>
+        <div id="modalContentWrapper" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;"></div>
+    </div>
+
+    <script src="Javascript/forum.js"></script>
+    <script src="Javascript/gembok.js"></script>
+</body>
+</html>

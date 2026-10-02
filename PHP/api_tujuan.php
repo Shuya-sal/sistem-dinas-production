@@ -1,0 +1,164 @@
+<?php
+error_reporting(0);
+ini_set('display_errors', 0);
+header("Content-Type: application/json");
+require 'koneksi.php'; 
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
+if (!isset($_SESSION['pegawai_id'])) {
+    http_response_code(401);
+    echo json_encode(["status" => "error", "message" => "Akses Ilegal!"]);
+    exit;
+}
+
+$user_tingkat = $_SESSION['pegawai_tingkat'] ?? 'Staf';
+
+try { $conn->query("ALTER TABLE tujuan ADD COLUMN uang_harian DOUBLE DEFAULT 0"); } catch (Exception $e) {}
+try { $conn->query("ALTER TABLE tujuan ADD COLUMN pagu_hotel DOUBLE DEFAULT 0"); } catch (Exception $e) {}
+try { $conn->query("ALTER TABLE tujuan ADD COLUMN pagu_hotel_4 DOUBLE DEFAULT 0"); } catch (Exception $e) {}
+try { $conn->query("ALTER TABLE tujuan ADD COLUMN pagu_hotel_es2 DOUBLE DEFAULT 0"); } catch (Exception $e) {}
+try { $conn->query("ALTER TABLE tujuan ADD COLUMN uang_representasi DOUBLE DEFAULT 0"); } catch (Exception $e) {}
+try { $conn->query("ALTER TABLE tujuan ADD COLUMN harga_tiket_pp DECIMAL(15,2) DEFAULT 0"); } catch (Exception $e) {}
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+// ==========================================
+// KODE PERBAIKAN: BLOKIR STAF & HUMAN
+// Hanya God Creator (atau Admin) yang boleh merubah Master Biaya!
+// ==========================================
+if (($user_tingkat === 'Human' || $user_tingkat === 'Staf') && ($method === 'POST' || $method === 'DELETE')) {
+    echo json_encode(["status" => "error", "message" => "Akses Ditolak! Anda tidak berhak mengubah Master Data Tujuan & Biaya."]);
+    exit;
+}
+
+if ($method == 'GET') {
+    $result = $conn->query("SELECT * FROM tujuan");
+    $data = [];
+    while ($row = $result->fetch_assoc()) $data[] = $row;
+    echo json_encode($data);
+} 
+elseif ($method == 'POST') {
+    $data = json_decode(file_get_contents("php://input"), true);
+    
+    $id = $data['id'];
+    $jenis = htmlspecialchars($data['jenis']);
+    $nama = htmlspecialchars($data['nama']);
+    $bunyi_berangkat = htmlspecialchars($data['bunyi_berangkat']);
+    $bunyi_pulang = htmlspecialchars($data['bunyi_pulang']);
+    $bunyi_tambahan = htmlspecialchars($data['bunyi_tambahan'] ?? '-');
+    
+    // ==========================================
+    // KODE PERBAIKAN: PAKSA ABSOLUT (ANTI MINUS)
+    // ==========================================
+    $uang_harian = abs(floatval($data['uang_harian']));
+    $pagu_hotel = abs(floatval($data['pagu_hotel'])); 
+    $pagu_hotel_4 = abs(floatval($data['pagu_hotel_4'])); 
+    $pagu_hotel_es2 = abs(floatval($data['pagu_hotel_es2'])); 
+    $uang_representasi = abs(floatval($data['uang_representasi']));
+    $harga_tiket_pp = abs(floatval($data['harga_tiket_pp'] ?? 0));
+    $berangkat = abs(floatval($data['berangkat']));
+    $pulang = abs(floatval($data['pulang']));
+    $tambahan = abs(floatval($data['tambahan']));
+    $total = abs(floatval($data['total']));
+
+    $stmt_cek = $conn->prepare("SELECT id FROM tujuan WHERE id = ?");
+    $stmt_cek->bind_param("s", $id);
+    $stmt_cek->execute();
+    $cek = $stmt_cek->get_result();
+    
+    if ($cek->num_rows > 0) {
+        $stmt = $conn->prepare(
+    "UPDATE tujuan SET
+        jenis=?,
+        nama=?,
+        bunyi_berangkat=?,
+        bunyi_pulang=?,
+        bunyi_tambahan=?,
+        uang_harian=?,
+        pagu_hotel=?,
+        pagu_hotel_4=?,
+        pagu_hotel_es2=?,
+        uang_representasi=?,
+        berangkat=?,
+        pulang=?,
+        tambahan=?,
+        harga_tiket_pp=?,
+        total=?
+     WHERE id=?"
+);
+
+$stmt->bind_param(
+    "sssssdddddddddds",
+    $jenis,
+    $nama,
+    $bunyi_berangkat,
+    $bunyi_pulang,
+    $bunyi_tambahan,
+    $uang_harian,
+    $pagu_hotel,
+    $pagu_hotel_4,
+    $pagu_hotel_es2,
+    $uang_representasi,
+    $berangkat,
+    $pulang,
+    $tambahan,
+    $harga_tiket_pp,
+    $total,
+    $id
+);
+    } else {
+        $stmt = $conn->prepare(
+    "INSERT INTO tujuan (
+        id,
+        jenis,
+        nama,
+        bunyi_berangkat,
+        bunyi_pulang,
+        bunyi_tambahan,
+        uang_harian,
+        pagu_hotel,
+        pagu_hotel_4,
+        pagu_hotel_es2,
+        uang_representasi,
+        berangkat,
+        pulang,
+        tambahan,
+        harga_tiket_pp,
+        total
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+
+    $stmt->bind_param(
+        "ssssssdddddddddd",
+        $id,
+        $jenis,
+        $nama,
+        $bunyi_berangkat,
+        $bunyi_pulang,
+        $bunyi_tambahan,
+        $uang_harian,
+        $pagu_hotel,
+        $pagu_hotel_4,
+        $pagu_hotel_es2,
+        $uang_representasi,
+        $berangkat,
+        $pulang,
+        $tambahan,
+        $harga_tiket_pp,
+        $total
+    );
+    }
+    
+    if ($stmt->execute()) echo json_encode(["status" => "success"]);
+    else echo json_encode(["status" => "error", "message" => $stmt->error]);
+}
+elseif ($method == 'DELETE') {
+    $data = json_decode(file_get_contents("php://input"), true);
+    $id = $data['id'];
+    
+    $stmt = $conn->prepare("DELETE FROM tujuan WHERE id = ?");
+    $stmt->bind_param("s", $id);
+    if ($stmt->execute()) echo json_encode(["status" => "success"]);
+    else echo json_encode(["status" => "error"]);
+}
+?>

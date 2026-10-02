@@ -1,0 +1,1350 @@
+/* ==========================================================================
+   GLOBAL & TYPOGRAPHY (FONT MODERN)
+========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #f1f5f9; 
+    padding: 30px 20px;
+    color: #334155;
+    line-height: 1.6;
+    overflow-y: scroll;
+}
+
+.container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #0f172a;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+/* ==========================================================================
+   TOP BAR (PROFIL, INDIKATOR ONLINE & LOGOUT)
+========================================================================== */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 15px 25px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.top-profile-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.top-profile-name {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 16px;
+    display: inline-flex; /* Ditambahkan agar isi sejajar */
+    align-items: center;  /* Ditambahkan agar sejajar di tengah secara vertikal */
+    gap: 6px;             /* Memberikan jarak antar nama dan lencana */
+    flex-wrap: wrap;
+}
+
+.online-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #10b981;
+    border-radius: 50%;
+    margin-right: 6px;
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+    animation: pulse-online 2s infinite;
+}
+
+@keyframes pulse-online {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* ==========================================================================
+   NAVIGATION MENU (PILL STYLE)
+========================================================================== */
+.nav-menu {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 35px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.nav-btn {
+    text-decoration: none;
+    background: #f8fafc;
+    color: #64748b;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 30px; 
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: translateY(-2px);
+}
+
+.nav-btn.active {
+    background: #2563eb; 
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.nav-btn[href="forum.html"].active,
+.nav-btn[data-target="forum.html"].active {
+    background: #f59e0b !important;
+    border-color: #f59e0b !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25) !important;
+}
+
+/* ==========================================================================
+   FORM & INPUT DESIGN
+========================================================================== */
+.form-section {
+    background: #f8fafc;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    border: 1px solid #e2e8f0;
+}
+
+.form-section h3 {
+    margin-bottom: 20px;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.form-inputs {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 220px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #475569;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+    color: #0f172a;
+}
+
+.form-group input:focus, 
+.form-group select:focus, 
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); 
+}
+
+.input-disabled {
+    background-color: #e2e8f0 !important;
+    color: #64748b !important;
+    cursor: not-allowed;
+    border-color: #cbd5e1 !important;
+}
+
+/* ==========================================================================
+   TABLES & KHUSUS TABEL PENUGASAN
+========================================================================== */
+.table-section {
+    margin-top: 30px;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow-x: auto;
+}
+
+.table-section h3 {
+    margin-bottom: 20px;
+    color: #0f172a;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.table-section th, .table-section td {
+    padding: 12px 10px; 
+    text-align: left;
+    font-size: 13px;
+    vertical-align: top;
+    border-bottom: 1px solid #e2e8f0;
+    word-wrap: break-word; 
+    overflow-wrap: break-word;
+    white-space: normal; 
+}
+
+th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+    border-bottom: 2px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+tr:hover td { background-color: #f8fafc; }
+tr:last-child td { border-bottom: none; }
+
+#tabelDinas { table-layout: fixed; }
+
+.img-tabel {
+    width: 45px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.link-tabel { color: #2563eb; text-decoration: none; font-weight: 600; }
+.link-tabel:hover { text-decoration: underline; color: #1d4ed8; }
+
+/* ==========================================================================
+   BUTTONS & TABEL AKSI
+========================================================================== */
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-save { background-color: #10b981; color: white; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
+.btn-save:hover { background-color: #059669; box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3); transform: translateY(-1px);}
+
+.btn-logout { background-color: #ef4444; color: white; padding: 10px 18px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.btn-logout:hover { background-color: #dc2626; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transform: translateY(-2px); }
+
+.btn-edit, .btn-delete, .btn-action, .btn-print, .btn-duplicate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px; 
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); 
+    color: #ffffff;
+    font-family: inherit;
+    text-decoration: none;
+}
+
+td > .btn-edit, td > .btn-delete {
+    width: 95px;      
+    height: 36px;     
+    padding: 0;       
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+td > .btn-action, td > .btn-print, td > .btn-duplicate {
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+td > .btn-edit:last-child, td > .btn-delete:last-child, td > .btn-action:last-child, td > .btn-print:last-child, td > .btn-duplicate:last-child {
+    margin-right: 0;
+}
+
+.btn-edit { background-color: #f59e0b; box-shadow: 0 3px 6px rgba(245, 158, 11, 0.2); }
+.btn-edit:hover { background-color: #d97706; box-shadow: 0 5px 12px rgba(245, 158, 11, 0.35); transform: translateY(-2px); }
+
+.btn-delete { background-color: #ef4444; box-shadow: 0 3px 6px rgba(239, 68, 68, 0.2); }
+.btn-delete:hover { background-color: #dc2626; box-shadow: 0 5px 12px rgba(239, 68, 68, 0.35); transform: translateY(-2px); }
+
+.btn-print { background-color: #3b82f6; box-shadow: 0 3px 6px rgba(59, 130, 246, 0.2); }
+.btn-print:hover { background-color: #2563eb; box-shadow: 0 5px 12px rgba(59, 130, 246, 0.35); transform: translateY(-2px); }
+
+.btn-duplicate { background-color: #10b981; box-shadow: 0 3px 6px rgba(16, 185, 129, 0.2); }
+.btn-duplicate:hover { background-color: #059669; box-shadow: 0 5px 12px rgba(16, 185, 129, 0.35); transform: translateY(-2px); }
+
+.btn-edit:active, .btn-delete:active, .btn-action:active, .btn-print:active, .btn-duplicate:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.action-group { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+#tabelDinas .action-group.column { flex-direction: column; align-items: stretch; width: 100%; margin: 0; }
+#tabelDinas .action-group.column > div { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+#tabelDinas .btn-action { width: 100%; padding: 6px 10px; text-align: center; white-space: normal; line-height: 1.2; box-sizing: border-box; margin: 0;}
+
+/* ==========================================================================
+   NOTIFIKASI LONCENG & DROPDOWN
+========================================================================== */
+.notif-wrapper { position: relative; cursor: pointer; font-size: 22px; user-select: none; display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.notif-wrapper:hover { transform: scale(1.15) rotate(10deg); }
+.notif-badge { position: absolute; top: -5px; right: -6px; background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: 800; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: popBadge 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes popBadge { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.notif-menu { display: none; position: absolute; top: 45px; right: -10px; width: 320px; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; overflow: hidden; cursor: default; animation: slideDown 0.2s ease-out;}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.notif-menu.show { display: block; }
+.notif-header { padding: 15px; background: #f8fafc; font-size: 14px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; text-align: left; }
+.notif-body { max-height: 320px; overflow-y: auto; }
+.notif-item { padding: 14px 15px; font-size: 13px; color: #475569; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; cursor: pointer; text-align: left; line-height: 1.5; }
+.notif-item:hover { background: #f0fdf4; } 
+.notif-item b { color: #2563eb; }
+.notif-empty { padding: 30px 20px; text-align: center; color: #94a3b8; font-size: 13px; font-weight: 500;}
+
+/* ==========================================================================
+   FORUM SOSIAL & FEED POSTINGAN
+========================================================================== */
+.feed-container { max-width: 680px; margin: 0 auto; }
+.create-post-box { background: #fff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 30px; border: 1px solid #f1f5f9;}
+.create-post-header { display: flex; gap: 15px; align-items: flex-start; }
+.create-post-header img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;}
+.create-post-input { flex: 1; }
+.create-post-input textarea { width: 100%; border: none; outline: none; resize: none; font-size: 15px; padding-top: 10px; color: #334155; }
+.video-link-input { width: 100%; border: 1px solid #cbd5e1; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 10px; outline: none; background: #f8fafc; transition: 0.2s;}
+.video-link-input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.create-post-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px; }
+.file-upload-label { cursor: pointer; color: #2563eb; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; background: #eff6ff; padding: 10px 16px; border-radius: 8px; transition: 0.2s;}
+.file-upload-label:hover { background: #dbeafe; transform: translateY(-1px); }
+.preview-area { margin-top: 15px; position: relative; display: none; }
+.media-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.media-item-preview { width: 85px; height: 85px; object-fit: cover; border-radius: 10px; border: 2px solid #e2e8f0; }
+.btn-remove-preview { position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(239,68,68,0.3); z-index: 2;}
+
+.post-card { background: #fff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 25px; border: 1px solid #f1f5f9; }
+.post-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+.post-header { display: flex; gap: 15px; align-items: center; }
+.post-header img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0; }
+.post-author { font-weight: 700; color: #0f172a; font-size: 15px; display: flex; align-items: center; }
+.post-time { font-size: 12px; color: #64748b; margin-top: 2px; display: block;}
+.post-dropdown { position: relative; display: inline-block; }
+.dots { cursor: pointer; font-size: 24px; font-weight: bold; color: #94a3b8; padding: 0 10px; line-height: 1; user-select: none; transition: 0.2s;}
+.dots:hover { color: #0f172a; }
+.dropdown-content { display: none; position: absolute; right: 0; top: 30px; background-color: #fff; min-width: 160px; box-shadow: 0px 10px 25px rgba(0,0,0,0.1); z-index: 10; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;}
+.dropdown-content button { color: #334155; padding: 12px 16px; display: block; width: 100%; text-align: left; border: none; background: none; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f1f5f9; font-weight: 500;}
+.dropdown-content button:hover { background-color: #f8fafc; color: #0f172a; }
+.show-dropdown { display: block; }
+.post-text { font-size: 15px; color: #334155; margin-bottom: 20px; line-height: 1.6; white-space: pre-wrap; }
+.post-media-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; border-radius: 12px; overflow: hidden;}
+.post-media-grid > * { flex: 1 1 calc(50% - 8px); max-height: 280px; object-fit: cover; border: 1px solid #e2e8f0; cursor: zoom-in; transition: 0.2s; background: #000; }
+.post-media-grid > *:hover { opacity: 0.9; }
+
+.comments-section { border-top: 1px solid #e2e8f0; padding-top: 20px; }
+.comment-item { display: flex; gap: 12px; margin-bottom: 15px; }
+.comment-item img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0; flex-shrink: 0;}
+.comment-bubble { background: #f8fafc; padding: 12px 16px; border-radius: 0 16px 16px 16px; flex: 1; border: 1px solid #e2e8f0;}
+.comment-author { font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 5px; display: flex; align-items: center; }
+.comment-text { font-size: 14px; color: #334155; margin: 0; line-height: 1.5;}
+.comment-time { font-size: 11px; color: #94a3b8; margin-top: 6px; display: block; text-align: right;}
+.comment-input-area { display: flex; gap: 12px; margin-top: 20px; align-items: center; background: #f8fafc; padding: 10px; border-radius: 30px; border: 1px solid #e2e8f0;}
+.comment-input-area img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; flex-shrink: 0;}
+.comment-input-area input { flex: 1; padding: 8px 10px; border: none; background: transparent; outline: none; font-size: 14px; color: #0f172a;}
+.comment-input-area button { background: #2563eb; color: white; border: none; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s;}
+.comment-input-area button:hover { background: #1d4ed8; }
+
+/* ==========================================================================
+   DESAIN MEDIA MODAL (POPUP FOTO) - MINIMALIS & MODERN
+========================================================================== */
+.media-modal { 
+    display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; 
+    background-color: rgba(0, 0, 0, 0.85); /* Hitam transparan yang lebih netral dan elegan */
+    justify-content: center; align-items: center; 
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); /* Blur yang lebih halus */
+}
+.media-modal-content { 
+    max-width: 95%; max-height: 85vh; border-radius: 8px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); object-fit: contain; 
+}
+/* Tombol Penutup (X) Ala Kaca Transparan / Frosted Glass */
+.close-modal { 
+    position: absolute; top: 20px; right: 20px; 
+    width: 40px; height: 40px; 
+    background: rgba(255, 255, 255, 0.15); 
+    color: #ffffff; font-size: 24px; font-weight: normal; 
+    display: flex; justify-content: center; align-items: center; 
+    border-radius: 50%; cursor: pointer; transition: all 0.2s ease; 
+    z-index: 10000; line-height: 1; 
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.close-modal:hover { 
+    background: rgba(255, 255, 255, 0.3); 
+    transform: scale(1.05); 
+}
+
+.loading-scroll { text-align: center; padding: 25px; color: #64748b; font-weight: 600; font-size: 14px; display: none; }
+.spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid #e2e8f0; border-radius: 50%; border-top-color: #2563eb; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 10px;}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+
+/* ==========================================================================
+   DESAIN PRIVATE CHAT (MENGAMBANG DI POJOK KANAN BAWAH)
+========================================================================== */
+.private-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 9999; font-family: inherit;}
+.chat-toggle-btn { background-color: #f39c12; color: white; border: none; border-radius: 30px; padding: 12px 20px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;}
+.chat-toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.3); }
+.chat-badge { background: #e74c3c; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; position: absolute; top: -5px; right: -5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+.chat-window { width: 330px; height: 480px; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 60px; right: 0; border: 1px solid #e2e8f0; z-index: 99999; }
+.chat-header { background: #f39c12; color: white; padding: 15px; font-weight: bold; display: flex; align-items: center; justify-content: space-between;}
+.chat-body { flex: 1; overflow-y: auto; background: #f8fafc; }
+.chat-contact-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; position: relative;}
+.chat-contact-item:hover { background: #f1f5f9; }
+.chat-contact-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 12px; }
+.chat-contact-name { flex: 1; font-weight: 600; font-size: 14px; color: #334155; }
+.unread-dot { background-color: #e74c3c; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; margin-left: 8px; animation: popBadge 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.chat-messages { display: flex; flex-direction: column; gap: 10px; padding: 15px 15px 40px 15px; }
+.chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.4; word-wrap: break-word; position: relative;}
+.chat-bubble.me { background: #3498db; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+.chat-bubble.them { background: #ffffff; color: #334155; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #e2e8f0; }
+.chat-time { font-size: 10px; color: rgba(255,255,255,0.7); display: block; text-align: right; margin-top: 4px; }
+.chat-bubble.them .chat-time { color: #94a3b8; text-align: left; }
+/* ================= DESAIN FOOTER CHAT (WAJIB SEBARIS) ================= */
+.chat-footer { 
+    display: flex !important; 
+    flex-direction: row !important; /* Wajib menyamping */
+    flex-wrap: nowrap !important;   /* Pantang turun ke bawah */
+    padding: 10px 12px !important; 
+    background: white !important; 
+    border-top: 1px solid #e2e8f0 !important; 
+    align-items: center !important; 
+    gap: 8px !important; 
+    width: 100% !important; 
+    box-sizing: border-box !important; 
+}
+
+/* Mengunci ikon kamera agar tidak berubah */
+.chat-footer label {
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+}
+
+/* Mengatur thumbnail foto (karakter anime) agar rapi */
+.chat-footer img {
+    width: 35px !important;
+    height: 35px !important;
+    object-fit: cover !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important; /* Pantang mengecil */
+    margin: 0 !important;
+}
+
+/* Kolom Ketikan (Satu-satunya yang boleh mengalah/mengecil) */
+.chat-footer input[type="text"] { 
+    flex: 1 1 auto !important; /* Bebas mengisi sisa ruang kosong */
+    min-width: 50px !important; /* Jangan sampai hilang total */
+    padding: 8px 12px !important; 
+    border: 1px solid #cbd5e1 !important; 
+    border-radius: 20px !important; 
+    outline: none !important; 
+    font-size: 13px !important; 
+    background: #f8fafc !important; 
+    margin: 0 !important;
+}
+
+/* Tombol Kirim (Harga Mati di Kanan) */
+.chat-footer button { 
+    flex-shrink: 0 !important; /* Pantang mengecil/terpotong */
+    background: #3498db !important; 
+    color: white !important; 
+    border: none !important; 
+    border-radius: 20px !important; 
+    padding: 8px 16px !important; 
+    margin: 0 !important; 
+    cursor: pointer !important; 
+    font-weight: bold !important; 
+    font-size: 13px !important; 
+    white-space: nowrap !important; /* Teks 'Kirim' pantang patah */
+}
+
+.chat-dropdown-btn { display: none; position: absolute; top: -5px; right: -5px; background: #f39c12; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 5;}
+.chat-bubble.me:hover .chat-dropdown-btn { display: flex; align-items: center; justify-content: center;}
+.chat-dropdown-menu { display: none; position: absolute; top: 20px; right: 0; background: white; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 10; min-width: 110px; overflow: hidden; border: 1px solid #e2e8f0;}
+.chat-dropdown-menu.show { display: block;}
+.chat-dropdown-menu button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #334155; font-family: inherit;}
+.chat-dropdown-menu button:hover { background: #f1f5f9;}
+
+
+/* ================= DESAIN FORM PEGAWAI ================= */
+.form-container-neat { background: #f8fafc; padding: 25px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);}
+.form-section-title { margin-top: 25px; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; font-size: 15px; font-weight: bold; color: #334155; margin-bottom: 15px;}
+.form-section-title.pribadi { border-bottom-color: #3b82f6; }
+.form-section-title.dinas { border-bottom-color: #10b981; }
+.form-section-title.keamanan { border-bottom-color: #f59e0b; }
+.form-group-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;}
+.custom-input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; color: #1e293b; background-color: #fff; transition: all 0.3s ease; box-sizing: border-box;}
+.custom-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);}
+.custom-label { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; display: block;}
+.form-group-foto-neat { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px;}
+.img-preview-neat { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 3px solid #3b82f6; padding: 3px; background: white;}
+.input-file-neat { margin-top: 15px; display: block; width: 100%; font-size: 13px;}
+.btn-flex-container { display: flex; gap: 15px; margin-top: 35px;}
+.btn-save-neat { flex: 1; padding: 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+.btn-save-neat:hover { background-color: #2ecc71; }
+.btn-cancel-neat { padding: 12px 25px; background-color: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+.btn-cancel-neat:hover { background-color: #c0392b; }
+.password-wrapper-neat { position: relative; display: flex; align-items: center;}
+.toggle-icon-neat { position: absolute; right: 12px; cursor: pointer;}
+.profile-layout-neat { display: flex; gap: 25px; align-items: flex-start; margin-bottom: 15px;}
+.profile-photo-column { flex: 0 0 140px; display: flex; flex-direction: column;}
+.profile-info-column { flex: 1;}
+
+/* ==========================================================================
+   OPTIMASI TAMPILAN SMARTPHONE (MOBILE RESPONSIVE)
+========================================================================== */
+@media (max-width: 768px) {
+    /* 1. Body & Container (Perkecil Jarak Tepi Layar) */
+    body { padding: 10px; }
+    .container { padding: 20px 15px; border-radius: 12px; }
+    h1 { font-size: 22px; margin-bottom: 20px; }
+
+    /* 2. Top Bar & Profil Atas (Susun Ke Bawah) */
+    .top-bar { flex-direction: column; gap: 15px; padding: 15px; text-align: center; }
+    .user-info { flex-direction: column; justify-content: center; }
+    .top-profile-name { justify-content: center; text-align: center; }
+
+    /* 3. Menu Navigasi (Jadikan Tombol Penuh Sebaris) */
+    .nav-menu { gap: 8px; flex-direction: column; width: 100%; }
+    .nav-btn { width: 100%; text-align: center; padding: 10px; }
+
+    /* 4. Form & Input (Penuhi Lebar Layar) */
+    .form-section { padding: 20px 15px; }
+    .form-row { flex-direction: column; gap: 15px; }
+    .form-group, .form-group-grid { min-width: 100%; grid-template-columns: 1fr; width: 100%; }
+    .profile-layout-neat { flex-direction: column; align-items: center; }
+    .profile-photo-column { flex: 0 0 auto; width: 100%; align-items: center; margin-bottom: 10px; }
+    .btn-flex-container { flex-direction: column; gap: 10px; }
+    .btn-save-neat, .btn-cancel-neat, .btn-save, .btn-delete { width: 100%; justify-content: center; margin-left: 0 !important; }
+
+    /* 5. Tabel & Tombol Aksi */
+    .table-section { padding: 15px 0; border-radius: 0; box-shadow: none; }
+    th, td { font-size: 11px; padding: 8px 6px; }
+    .action-group { flex-direction: column; }
+    td > .btn-edit, td > .btn-delete, td > .btn-action, td > .btn-print, td > .btn-duplicate { width: 100%; margin-right: 0; margin-bottom: 5px; }
+
+    /* 6. Forum & Postingan (LUBER KANAN TERATASI) */
+    .feed-container { width: 100%; overflow-x: hidden; } /* Cegah geser kanan */
+    .create-post-box, .post-card { padding: 15px; border-radius: 12px; width: 100%; }
+    
+    /* PERBAIKAN NAMA & LENCANA KHUSUS HP (Saran Anda) */
+    .post-header { align-items: flex-start !important; gap: 10px !important; }
+    .post-header > div { display: flex; flex-direction: column; min-width: 0; overflow: visible !important; }
+    .post-author, .comment-author { flex-wrap: wrap !important; gap: 6px !important; line-height: 1.4 !important; }
+    .badge-level { margin-left: 0 !important; }
+    
+    /* Tombol Aksi Post disusun ke bawah agar tidak memaksa layar melebar */
+    .create-post-actions { flex-direction: column; gap: 10px; align-items: stretch; }
+    .file-upload-label { width: 100%; justify-content: center; margin: 0; }
+    .create-post-actions small { text-align: center; margin-left: 0 !important; display: block; }
+    .create-post-actions .btn-save { width: 100%; }
+    
+    .post-header-top { flex-direction: column; align-items: flex-start; gap: 10px; position: relative; }
+    .post-dropdown { position: absolute; right: 0; top: 0; }
+    .post-media-grid > * { flex: 1 1 100%; max-height: 250px; }
+    
+    /* Perbaikan Kolom Balas Komentar */
+    .comment-item { flex-direction: column; gap: 5px; }
+    .comment-input-area { flex-wrap: wrap; justify-content: center; border-radius: 12px; padding: 15px 10px; }
+    .comment-input-area textarea { width: 100% !important; margin: 10px 0; } /* Mengunci lebar teks area */
+    .comment-input-area button { width: 100%; }
+
+    /* 7. Profil Pribadi */
+    .profile-cover { height: 160px; }
+    .profile-header { margin-top: -50px; padding: 0 15px 15px; }
+    .profile-avatar { width: 100px; height: 100px; border-width: 3px; }
+    .profile-name { font-size: 20px; flex-direction: column; text-align: center; }
+    .profile-nav { flex-wrap: wrap; }
+    .profile-nav-btn { width: 50%; font-size: 13px; padding: 10px; }
+
+    /* 8. Chat Widget & Notifikasi (LUBER KANAN TERATASI) */
+    .private-chat-widget { right: 15px; bottom: 15px; }
+    .chat-window { 
+        position: fixed; /* Kunci permanen ke layar HP, bukan ke ikon */
+        right: 15px; 
+        bottom: 70px; 
+        width: calc(100vw - 30px); /* Melebar pas menyesuaikan tepi layar */
+        max-width: 350px; 
+        height: 450px; 
+        max-height: 75vh;
+        z-index: 10000; 
+    }
+    .chat-toggle-btn { padding: 10px 15px; font-size: 13px; }
+    .notif-menu { width: calc(100vw - 30px); right: -10px; max-width: 320px; }
+    /* =======================================================
+       9. HALAMAN PENUGASAN DINAS (KHUSUS MOBILE)
+    ======================================================= */
+    /* A. Memecah Form Sosper / Narasumber yang tadinya berdampingan menjadi Atas-Bawah */
+    #gridPelaksanaan, 
+    #formSosper > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important; 
+    }
+
+    /* B. Merapikan Kotak Rincian Biaya & Tiket Penerbangan */
+    #containerRincianBiaya, #containerPenerbangan {
+        flex-direction: column !important;
+        padding: 15px 10px !important;
+    }
+    #containerRincianBiaya .form-group, #containerPenerbangan .form-group {
+        min-width: 100% !important; 
+        margin-bottom: 10px;
+    }
+
+    /* C. Merapikan Judul dan Tombol Export (Excel / PDF) */
+    .print-header {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+        gap: 15px !important;
+    }
+    #exportButtonsContainer {
+        justify-content: space-between;
+        width: 100%;
+    }
+    #exportButtonsContainer button {
+        flex: 1; /* Membuat tombol Export membagi 2 layar secara rata */
+        justify-content: center;
+    }
+
+    /* D. Merapikan Filter Pencarian & Tanggal */
+    .table-section > div[style*="margin-bottom: 15px; display: flex"] {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    #searchDinas {
+        min-width: 100% !important; 
+        width: 100% !important;
+    }
+    .table-section > div[style*="margin-bottom: 15px; display: flex"] > div {
+        flex-direction: column; 
+        align-items: stretch !important;
+        background: #f8fafc;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* E. MENGATASI TABEL GEPENG (SWIPE TO SCROLL) */
+    .table-section {
+        width: 100%;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch; /* Efek geser mulus (momentum) di iPhone/Android */
+        padding: 15px !important;
+    }
+    #tabelDinas {
+        min-width: 1000px; /* Memaksa tabel tetap lebar di dalam wadahnya agar teks tidak gepeng */
+    }
+    /* Memunculkan Petunjuk Geser Tabel dengan animasi maju-mundur */
+    .swipe-indicator { 
+        display: block !important; 
+        animation: swipeAnim 1s infinite alternate; 
+    }
+    @keyframes swipeAnim { 
+        from { transform: translateX(0); } 
+        to { transform: translateX(-8px); } 
+    }
+    /* =======================================================
+       10. HALAMAN PROFIL PRIBADI (KHUSUS MOBILE)
+    ======================================================= */
+    /* A. Memaksa Foto Profil Mengecil & Menimpa Inline Style dari JS */
+    .profile-header > div:first-child {
+        width: 110px !important;
+        height: 110px !important;
+        margin-top: -35px !important; /* Menarik foto sedikit ke atas agar pas di tengah sampul */
+        border-width: 3px !important;
+        margin-bottom: 5px !important;
+    }
+
+    /* B. Merapikan Header, Nama, dan Teks Jabatan */
+    .profile-header {
+        padding: 0 15px 20px !important;
+        margin-top: -50px !important; 
+    }
+    .profile-name {
+        font-size: 19px !important;
+        flex-direction: column !important; /* Jika nama/lencana kepanjangan, akan disusun ke bawah */
+        text-align: center;
+        gap: 6px !important;
+        margin-top: 5px !important;
+        line-height: 1.3;
+    }
+    .profile-role-text {
+        font-size: 12px !important;
+        text-align: center;
+        line-height: 1.4;
+        padding: 0 10px;
+    }
+
+    /* C. Mencegah Teks Progress Bar Bertabrakan di Layar Sempit */
+    .progress-container {
+        padding: 12px !important;
+        margin-top: 15px !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+    .progress-container > div:first-child {
+        flex-direction: column; /* Membuat teks Target Lencana turun ke bawah */
+        gap: 4px;
+        align-items: center;
+        text-align: center;
+    }
+    .progress-container > div:first-child span {
+        font-size: 11px !important; /* Mengecilkan sedikit ukuran font target */
+    }
+
+    /* D. Galeri Foto ala Instagram (Minimal 3 Kolom Rapat di HP) */
+    .profile-photo-grid {
+        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)) !important;
+        gap: 5px !important;
+        padding: 8px !important;
+    }
+    .profile-photo-grid img {
+        height: 105px !important;
+        border-radius: 4px !important; /* Sudut lebih tajam ala grid HP */
+    }
+
+    /* E. Tab Menu (Postingan & Galeri) Membagi 2 Secara Presisi */
+    .profile-nav {
+        display: flex;
+        width: 100%;
+        padding: 0 !important;
+    }
+    .profile-nav-btn {
+        flex: 1 !important; /* Memaksa 50% kiri, 50% kanan */
+        font-size: 13px !important;
+        padding: 12px 5px !important;
+        text-align: center;
+    }
+    /* =======================================================
+       11. KUNCI MATI HORIZONTAL SCROLL (ANTI-LUBER GLOBAL)
+    ======================================================= */
+    /* A. Sabuk Pengaman Utama: Memotong paksa semua elemen yang mencoba keluar layar */
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        position: relative;
+    }
+
+    /* B. Memperbaiki Menu Notifikasi menjadi Pop-Up Modal di Tengah Layar HP */
+    
+    /* 1. HANCURKAN JEBAKAN TRANSFORM: Matikan efek goyang lonceng khusus di HP */
+    .notif-wrapper { transform: none !important; animation: none !important; }
+    .notif-wrapper:hover, .notif-wrapper:active { transform: none !important; }
+    
+    /* 2. Jadikan Popup Modal Melayang di Tengah Layar */
+    @keyframes popModalMobile { 
+        from { opacity: 0; transform: translate(-50%, -20px) scale(0.95); } 
+        to { opacity: 1; transform: translate(-50%, 0) scale(1); } 
+    }
+    
+    .notif-menu {
+        position: fixed !important; 
+        top: 85px !important; /* Gunakan hitungan pixel pasti dari atas layar */
+        left: 50% !important; 
+        right: auto !important;
+        bottom: auto !important;
+        margin: 0 !important;
+        transform: translateX(-50%) !important; /* Kunci absolut di tengah */
+        width: 90vw !important; /* Lebar 90% dari layar HP */
+        max-width: 380px !important;
+        z-index: 999999 !important; /* Wajib paling depan menutupi segalanya */
+        animation: popModalMobile 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+        box-shadow: 0 20px 100px rgba(0,0,0,0.5) !important; 
+        border: 1px solid #cbd5e1 !important;
+    }
+
+    /* C. Memperbaiki Menu Titik 3 di Sampul Profil agar tidak jebol batas layar */
+    #coverDropdown {
+        right: 0 !important;
+        max-width: 200px !important;
+    }
+
+    /* D. Memaksa Teks Panjang (Link/Nama tanpa spasi) untuk patah ke baris baru */
+    .profile-name, .profile-role-text, .post-text, .comment-text, .chat-bubble, p, h1, h3 {
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        word-break: break-word !important;
+        white-space: normal !important;
+    }
+
+    /* E. Memastikan Wadah Profil patuh pada batas layar */
+    .profile-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+}
+
+
+/* ========================================================
+   SISTEM LENCANA (BADGE) FORUM SOSIAL & EFEK VISUAL
+======================================================== */
+.badge-level { font-size: 11px; padding: 3px 10px; border-radius: 12px; margin-left: 8px; font-weight: 800; display: inline-flex; align-items: center; vertical-align: middle; text-shadow: none; letter-spacing: 0.3px; user-select: none; white-space: nowrap;}
+.badge-newbie { background-color: #e2e8f0; color: #475569; }
+.badge-pencair { background-color: #bbf7d0; color: #166534; }
+.badge-moodmaker { background-color: #fef08a; color: #854d0e; }
+.badge-life { background-color: #fbcfe8; color: #9d174d; }
+.badge-butterfly { background: linear-gradient(135deg, #d946ef, #a855f7); color: #ffffff; position: relative; z-index: 1;}
+.badge-butterfly::before, .badge-butterfly::after { content: '🦋'; position: absolute; font-size: 14px; pointer-events: none;}
+.badge-butterfly::before { top: -8px; left: -10px; animation: flyLeftToRight 5s ease-in-out infinite;}
+.badge-butterfly::after { bottom: -8px; right: -10px; animation: flyRightToLeft 4.5s ease-in-out infinite;}
+@keyframes flyLeftToRight { 0% { transform: translate(0, 0) rotate(-10deg) scale(0.9); opacity: 0.8; } 25% { transform: translate(35px, -15px) rotate(15deg) scale(1.2); opacity: 1; } 50% { transform: translate(75px, 5px) rotate(-5deg) scale(0.8); opacity: 0.6; } 75% { transform: translate(35px, 15px) rotate(-15deg) scale(1.1); opacity: 1; } 100% { transform: translate(0, 0) rotate(-10deg) scale(0.9); opacity: 0.8; } }
+@keyframes flyRightToLeft { 0% { transform: translate(0, 0) rotate(10deg) scale(0.9); opacity: 0.8; } 25% { transform: translate(-35px, 15px) rotate(-15deg) scale(1.2); opacity: 1; } 50% { transform: translate(-75px, -5px) rotate(5deg) scale(0.8); opacity: 0.6; } 75% { transform: translate(-35px, -15px) rotate(15deg) scale(1.1); opacity: 1; } 100% { transform: translate(0, 0) rotate(10deg) scale(0.9); opacity: 0.8; } }
+.badge-suhu { background: linear-gradient(270deg, #0f172a, #312e81, #4c1d95, #0f172a); background-size: 300% 300%; color: #e0e7ff; border: 1px solid #a855f7; position: relative; overflow: hidden; text-shadow: 0 0 5px #c084fc; animation: cosmicGlow 4s ease infinite; }
+.badge-suhu::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.6), transparent); transform: skewX(-30deg); animation: cosmicShine 3s infinite;}
+@keyframes cosmicGlow { 0% { background-position: 0% 50%; box-shadow: 0 0 8px #7e22ce, inset 0 0 5px #9333ea; } 50% { background-position: 100% 50%; box-shadow: 0 0 18px #a855f7, inset 0 0 10px #d8b4fe; border-color: #d8b4fe; } 100% { background-position: 0% 50%; box-shadow: 0 0 8px #7e22ce, inset 0 0 5px #9333ea; } }
+@keyframes cosmicShine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+
+/* ==========================================================================
+   BADGE GOD CREATOR (ANIMASI MEWAH EMAS)
+========================================================================== */
+.badge-god {
+    position: relative;
+    overflow: hidden; 
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+    color: #fbbf24; 
+    border: 1px solid #fbbf24; 
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.3); 
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 10px;
+    display: inline-flex;     /* Diubah dari inline-block ke inline-flex */
+    align-items: center;      /* Tambahan untuk menyelaraskan teks di dalam lencana */
+    vertical-align: middle;   /* Tambahan agar sejajar dengan elemen lain */
+    letter-spacing: 0.5px;
+}
+
+.badge-god::before {
+    content: "";
+    position: absolute;
+    top: -200%;
+    left: -100%;
+    width: 300%;
+    height: 300%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 40%,
+        rgba(255, 255, 255, 0.6) 50%,
+        rgba(255, 255, 255, 0) 60%
+    );
+    transform: rotate(45deg); 
+    animation: goldShine 3s infinite; 
+    z-index: 1;
+    pointer-events: none;
+}
+@keyframes goldShine {
+    0% { left: -150%; opacity: 0; }
+    50% { opacity: 1; }
+    100% { left: 150%; opacity: 0; }
+}
+
+/* Lencana Super Admin (Tema Merah) */
+.badge-admin {
+    position: relative; overflow: hidden; 
+    background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); 
+    color: #fca5a5; border: 1px solid #ef4444; 
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); 
+    padding: 4px 10px; border-radius: 6px; font-weight: 800; text-transform: uppercase; font-size: 10px;
+    display: inline-flex; align-items: center; vertical-align: middle; letter-spacing: 0.5px;
+}
+
+/* Lencana Pengguna Anggaran (Tema Hijau) */
+.badge-pa {
+    position: relative; overflow: hidden; 
+    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%); 
+    color: #6ee7b7; border: 1px solid #10b981; 
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); 
+    padding: 4px 10px; border-radius: 6px; font-weight: 800; text-transform: uppercase; font-size: 10px;
+    display: inline-flex; align-items: center; vertical-align: middle; letter-spacing: 0.5px;
+}
+
+/* Lencana Staf (Tema Biru) */
+.badge-staf {
+    position: relative; overflow: hidden; 
+    background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%); 
+    color: #93c5fd; border: 1px solid #3b82f6; 
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); 
+    padding: 4px 10px; border-radius: 6px; font-weight: 800; text-transform: uppercase; font-size: 10px;
+    display: inline-flex; align-items: center; vertical-align: middle; letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   HALAMAN PROFIL
+========================================================================== */
+.profile-wrapper { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
+.profile-cover { height: 260px; background: linear-gradient(135deg, #1e293b, #3b82f6, #a855f7); position: relative; background-size: cover; background-position: center; }
+.profile-header { padding: 0 20px 20px; display: flex; flex-direction: column; align-items: center; margin-top: -75px; position: relative; }
+.profile-avatar { width: 150px; height: 150px; border-radius: 50%; border: 5px solid #fff; object-fit: cover; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.15); z-index: 2; }
+.profile-name { font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+.profile-role-text { font-size: 14px; color: #64748b; font-weight: 600; margin-top: 2px; }
+.profile-nav { display: flex; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #e2e8f0; background: #fff; }
+.profile-nav-btn { flex: 1; padding: 15px; border: none; background: none; font-size: 15px; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.2s; }
+.profile-nav-btn:hover { background: #f8fafc; color: #3b82f6; }
+.profile-nav-btn.active { color: #3b82f6; border-bottom: 3px solid #3b82f6; }
+.profile-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; padding: 20px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; }
+.profile-photo-grid img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; cursor: zoom-in; border: 1px solid #e2e8f0; transition: 0.3s; }
+.profile-photo-grid img:hover { transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 2; }
+.link-profil { text-decoration: none; color: inherit; transition: 0.2s; cursor: pointer; }
+.link-profil:hover { color: #3b82f6 !important; text-decoration: underline; }
+
+/* ==========================================================================
+   PENGATURAN CETAK (PRINT DOKUMEN RESMI)
+========================================================================== */
+.print-only { display: none; }
+
+@media print {
+    /* ======================================================================
+       JURUS SEGEL MUTLAK (WHITELIST)
+       Menghancurkan semua elemen liar (termasuk panah) tanpa merusak laporan
+    ====================================================================== */
+    
+    /* 1. Sembunyikan semua elemen di level Root (HTML) selain Body & Head */
+    html > *:not(body):not(head) { display: none !important; }
+    
+    /* 2. Sembunyikan semua elemen di level Body selain Container Utama (Panah mati di sini) */
+    body > *:not(.container) { display: none !important; }
+    
+    /* 3. Sembunyikan semua elemen di dalam Container selain area cetak (#printTemplate) */
+    .container > *:not(#printTemplate) { display: none !important; }
+
+    /* ====================================================================== */
+
+    /* 4. Format ulang Container & Body agar murni bersih seperti kertas HVS */
+    html, body, .container {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+    }
+
+    /* 5. Tampilkan HANYA area cetak laporan */
+    #printTemplate { 
+        display: block !important; 
+        font-family: 'Times New Roman', Times, serif; 
+        font-size: 14px; 
+        line-height: 1.5; 
+        color: #000; 
+        position: relative !important;
+    }
+
+    /* ------------------------------------------------------------------
+       KODE PERBAIKAN FINAL: Paksa semua elemen teks (terutama sel tabel) menjadi 14px.
+       (Kita TINGGALKAN tag 'span' agar Kop Surat tetap aman dan besar!)
+    ------------------------------------------------------------------- */
+    #printTemplate td,
+    #printTemplate th,
+    #printTemplate p,
+    #printTemplate li,
+    #printTemplate div {
+        font-size: 14px !important;
+    }
+
+    /* Kembalikan ukuran besar KHUSUS untuk Judul Laporan */
+    #printTemplate .print-title-doc h3,
+    #printTemplate .print-title-doc span {
+        font-size: 16px !important;
+    }
+    /* ------------------------------------------------------------------ */
+
+    /* 6. Style Elemen di Dalam Laporan (Penting untuk Format Rapi MS Word) */
+    #printTemplate .rich-text-area ul, #printTemplate .rich-text-area ol { padding-left: 20px !important; margin-top: 5px !important; margin-bottom: 5px !important; }
+    #printTemplate .rich-text-area ul { list-style-type: disc !important; }
+    #printTemplate .rich-text-area ol { list-style-type: decimal !important; font-weight: normal !important; }
+    #printTemplate .rich-text-area li { margin-bottom: 5px !important; display: list-item !important; font-weight: normal !important;}
+    #printTemplate .rich-text-area p { margin: 0 0 6px 0 !important; font-weight: normal !important;}
+    
+    .page-break { page-break-before: always; margin-top: 10px;} 
+    .print-title-doc { text-align: center; font-weight: bold; margin-bottom: 20px; }
+    .print-title-doc h3 { font-size: 16px; margin-bottom: 2px; }
+    .print-content ol { padding-left: 20px; }
+    .print-content p { margin-bottom: 10px; text-align: justify; }
+    .signature-table { width: 100%; margin-top: 30px; border: none; }
+    .signature-table td { border: none; text-align: center; padding: 5px; }
+    .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    .data-table th, .data-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+    .identitas-tabel { border: none; width: auto; }
+    .identitas-tabel td { border: none; padding: 3px 10px 3px 0; }
+
+    /* ==========================================================
+       MEMPERBESAR KHUSUS KOP SURAT DEWAN SAJA (Tanpa Menyentuh Sekretariat)
+    ========================================================== */
+    
+    /* 1. Perbesar HANYA Logo DPRD Kalsel (Kop Dewan) */
+    #printTemplate table:has(img[src*="Logo-DPRD-kalsel.png"]) img {
+        width: 140px !important; 
+    }
+
+    /* 2. Perbesar Judul "DEWAN PERWAKILAN RAKYAT DAERAH..." */
+    #printTemplate table:has(img[src*="Logo-DPRD-kalsel.png"]) span:nth-of-type(1),
+    #printTemplate table:has(img[src*="Logo-DPRD-kalsel.png"]) span:nth-of-type(2) {
+        font-size: 22px !important; 
+        letter-spacing: 1px !important; /* Meregangkan huruf agar pas ke tepi */
+        line-height: 1.2 !important;
+    }
+
+    /* 3. Perbesar Teks Alamat & Telepon di Kop Dewan */
+    #printTemplate table:has(img[src*="Logo-DPRD-kalsel.png"]) span:nth-of-type(3),
+    #printTemplate table:has(img[src*="Logo-DPRD-kalsel.png"]) span:nth-of-type(4) {
+        font-size: 16px !important; 
+    }
+}
+
+/* ==========================================================================
+   NAVIGASI MEDIA MODAL (PANAH KIRI KANAN ALA INSTAGRAM)
+========================================================================== */
+.nav-media-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+.nav-media-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.1); }
+.nav-media-btn:active { transform: translateY(-50%) scale(0.95); }
+.nav-media-btn.left { left: 25px; }
+.nav-media-btn.right { right: 25px; }
+
+@keyframes popInMedia {
+    from { transform: scale(0.95); opacity: 0.5; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+    .nav-media-btn { width: 38px; height: 38px; font-size: 18px; }
+    .nav-media-btn.left { left: 10px; }
+    .nav-media-btn.right { right: 10px; }
+}
+
+/* ==========================================================================
+   FITUR MENTION (@USERNAME) DROPDOWN
+========================================================================== */
+.mention-dropdown {
+    position: fixed;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 999999; /* Wajib di atas keyboard HP dan segalanya */
+    display: none;
+    width: 260px;
+    max-width: 90vw;
+}
+.mention-item {
+    padding: 10px 15px;
+    font-size: 13px;
+    color: #0f172a;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+}
+.mention-item:last-child { border-bottom: none; }
+.mention-item:hover, .mention-item:active {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 700;
+}
+.mention-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+/* ==========================================================================
+   DASHBOARD DONATUR (VIP PANEL) - GOD CREATOR
+========================================================================== */
+.vip-search { 
+    background: rgba(255,255,255,0.05) !important; 
+    color: white !important; 
+    border: 1px solid #475569 !important; 
+    margin-bottom: 20px; 
+    font-size: 15px;
+}
+.vip-search:focus { 
+    border-color: #fbbf24 !important; 
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2) !important; 
+    background: rgba(255,255,255,0.1) !important;
+}
+.vip-list-container { 
+    background: rgba(0,0,0,0.25); 
+    border-radius: 12px; 
+    padding: 15px; 
+    max-height: 550px; 
+    overflow-y: auto; 
+    border: 1px solid #334155; 
+}
+.vip-item { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 12px 15px; 
+    border-bottom: 1px solid #334155; 
+    transition: 0.2s; 
+}
+.vip-item:hover { background: rgba(255,255,255,0.05); }
+.vip-item:last-child { border-bottom: none; }
+.vip-user-info { display: flex; align-items: center; gap: 15px; }
+.vip-avatar { 
+    width: 45px; 
+    height: 45px; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    border: 2px solid #475569; 
+}
+.vip-name { color: #f8fafc; font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.vip-role { color: #94a3b8; font-size: 12px; }
+.btn-toggle-donatur { 
+    background: #475569; 
+    color: white; 
+    border: none; 
+    padding: 8px 18px; 
+    border-radius: 20px; 
+    font-size: 12px; 
+    font-weight: 800; 
+    cursor: pointer; 
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
+.btn-toggle-donatur.active { 
+    background: linear-gradient(135deg, #f59e0b, #d97706); 
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); 
+    color: #fff; 
+    border: 1px solid #fbbf24;
+}
+.btn-toggle-donatur:hover { transform: translateY(-2px) scale(1.05); }
+.btn-toggle-donatur:active { transform: scale(0.95); }
+
+/* ==========================================================================
+   DASHBOARD DONATUR (VIP PANEL) - GOD CREATOR
+========================================================================== */
+.vip-search { background: rgba(255,255,255,0.05) !important; color: white !important; border: 1px solid #475569 !important; margin-bottom: 20px; font-size: 15px; }
+.vip-search:focus { border-color: #fbbf24 !important; box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2) !important; background: rgba(255,255,255,0.1) !important; }
+.vip-list-container { background: rgba(0,0,0,0.25); border-radius: 12px; padding: 15px; max-height: 550px; overflow-y: auto; border: 1px solid #334155; }
+.vip-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid #334155; transition: 0.2s; }
+.vip-item:hover { background: rgba(255,255,255,0.05); }
+.vip-item:last-child { border-bottom: none; }
+.vip-user-info { display: flex; align-items: center; gap: 15px; }
+.vip-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #475569; }
+.vip-name { color: #f8fafc; font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.vip-role { color: #94a3b8; font-size: 12px; }
+.btn-toggle-donatur { background: #475569; color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.btn-toggle-donatur.active { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); color: #fff; border: 1px solid #fbbf24; }
+.btn-toggle-donatur:hover { transform: translateY(-2px) scale(1.05); }
+.btn-toggle-donatur:active { transform: scale(0.95); }
+
+/* ==========================================================================
+   EFEK VISUAL LENCANA & BACKGROUND VIP DONATUR (FORUM & LAPORAN CETAK)
+========================================================================== */
+.badge-vip-donatur {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+    color: #fff;
+    border: 1px solid #fef3c7;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.5);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-left: 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    animation: vipGlow 2s infinite alternate;
+}
+.badge-vip-donatur::before {
+    content: '🌟';
+    margin-right: 4px;
+    font-size: 11px;
+}
+@keyframes vipGlow {
+    0% { box-shadow: 0 0 5px rgba(245, 158, 11, 0.4); }
+    100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.8), 0 0 25px rgba(251, 191, 36, 0.5); }
+}
+
+/* KHUSUS EFEK CETAK LAPORAN (Background Baris & Teks Nama) */
+@media print {
+    /* Mewarnai Latar Belakang Baris Tabel */
+    .row-vip-donatur td, 
+    .row-vip-donatur th {
+        background-color: #fffbeb !important; /* Warna Latar Emas Sangat Muda */
+        border-bottom: 2px solid #fcd34d !important; /* Garis bawah emas tebal */
+    }
+    
+    /* Mewarnai Teks Nama Donatur */
+    .name-vip-donatur {
+        color: #b45309 !important; /* Coklat Keemasan Gelap */
+        font-weight: 900 !important;
+    }
+
+    /* Memastikan Lencana tetap tercetak dengan warna aslinya di kertas */
+    .badge-vip-donatur {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+
+/* Efek Latar Emas untuk Baris Tabel di Layar (Non-Print) */
+tr.row-vip-donatur td {
+    background-color: #fffbeb !important;
+}
+td.name-vip-donatur b {
+    color: #b45309 !important;
+}
+
+/* ==========================================================================
+   BADGE SANGEAN (TAG LENCANA KHUSUS)
+========================================================================== */
+.badge-sangean {
+    background: linear-gradient(135deg, #ec4899, #be185d);
+    color: #ffffff;
+    border: 1px solid #fbcfe8;
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.3);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-left: 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.badge-sangean::before {
+    content: '🔥';
+    margin-right: 4px;
+    font-size: 11px;
+}
+
+/* ==========================================================================
+   EFEK GLOWING CAHAYA ISTIMEWA UNTUK VIP DONATUR
+========================================================================== */
+@keyframes glowingVIP {
+    0% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2), inset 0 0 5px rgba(251, 191, 36, 0.1); border-color: #fcd34d; }
+    50% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.8), inset 0 0 15px rgba(251, 191, 36, 0.5); border-color: #f59e0b; }
+    100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2), inset 0 0 5px rgba(251, 191, 36, 0.1); border-color: #fcd34d; }
+}
+
+/* 1. Postingan Utama & Balasan Komentar VIP */
+.post-vip-donatur,
+.comment-vip-donatur {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+    animation: glowingVIP 2.5s infinite alternate !important;
+}
+
+/* 2. Obrolan Private VIP (Bubble Saya - Emas Gelap) */
+.chat-bubble.me.chat-vip-donatur {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    color: #ffffff !important;
+    animation: glowingVIP 2.5s infinite alternate !important;
+}
+
+/* 3. Obrolan Private VIP (Bubble Lawan - Emas Terang) */
+.chat-bubble.them.chat-vip-donatur {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+    color: #b45309 !important;
+    animation: glowingVIP 2.5s infinite alternate !important;
+}
+.chat-bubble.them.chat-vip-donatur .chat-time {
+    color: #d97706 !important;
+}
+
+@page { size: A4; margin-top: 0.5cm; margin-bottom: 1.5cm; margin-left: 2cm; margin-right: 2cm;
+}

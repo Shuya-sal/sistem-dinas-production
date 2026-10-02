@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Dinas - Penugasan & Laporan</title>
+    <link rel="stylesheet" href="CSS/style.css?v=9">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
+
+    <style>
+        @media print {
+            /* Sembunyikan SEMUA elemen body kecuali kontainer cetak (printTemplate) */
+            body > * { display: none !important; }
+            #printTemplate {
+                display: block !important;
+                width: 100% !important;
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 14px;
+                color: #000;
+                position: static !important;
+            }
+            body { 
+                background: white !important; 
+                padding: 0 !important; 
+                margin: 0 !important; 
+            }
+            @page {
+                size: A4;
+                margin-top: 0.5cm;
+                margin-bottom: 1.5cm;
+                margin-left: 2cm;
+                margin-right: 2cm;
+            }
+            th, .data-table th {
+                background-color: transparent !important;
+                color: black !important;
+                border: 1px solid black !important;
+            }
+            /* PEMBUNUH ELEMEN MELAYANG: 
+               Menargetkan class apapun yang biasa dipakai untuk tombol "Ke Atas", notifikasi, atau chat melayang */
+            [style*="position: fixed"], 
+            [style*="position:fixed"], 
+            [style*="position: absolute"], 
+            [style*="position:absolute"], 
+            .scroll-to-top, 
+            #scrollToTopBtn, 
+            .back-to-top,
+            .notif-wrapper,
+            .top-bar {
+                display: none !important;
+                opacity: 0 !important;
+                visibility: hidden !important;
+            }
+        }
+        .ts-control { border: 1px solid #dcdde1; border-radius: 6px; padding: 12px; font-size: 14px; box-sizing: border-box; }
+        .ts-control.focus { border-color: #2980b9; box-shadow: 0 0 5px rgba(41, 128, 185, 0.2); }
+        .online-dot { display: inline-block; width: 9px; height: 9px; background-color: #2ecc71; border-radius: 50%; margin-right: 5px; box-shadow: 0 0 5px #2ecc71; animation: pulse-online 2s infinite; }
+        @keyframes pulse-online { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 5px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="top-bar no-print">
+            <div class="user-info">
+                <img src="Image/default.jpg" id="topProfilePic" class="top-profile-img" onerror="this.onerror=null; this.src='Image/default.jpg';" alt="Foto">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="topProfileName" class="top-profile-name">Memuat...</div>
+                        <span id="topProfileRole" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;"></span>
+                    </div>
+                    <div style="font-size: 11px; color: #27ae60; margin-top: 2px; font-weight: bold; display: flex; align-items: center;">
+                        <span class="online-dot"></span> <span id="onlineCountText">Sedang aktif</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="notif-wrapper" onclick="toggleNotifikasi(event)" title="Pemberitahuan">🔔<span class="notif-badge" id="notifBadge" style="display: none;">0</span><div class="notif-menu" id="notifMenu"><div class="notif-header">Pemberitahuan Baru</div><div class="notif-body" id="notifBody"><div class="notif-empty">Tidak ada pemberitahuan baru</div></div></div></div>
+                <button onclick="logoutSistem()" class="btn-logout">🚪 Keluar</button>
+            </div>
+        </div>
+        <h1 class="no-print">Manajemen Perjalanan Dinas</h1>
+
+        <div class="nav-menu no-print">
+            <a href="dashboard.html" class="nav-btn active">📊 Dashboard</a>
+            <a href="pegawai.html" class="nav-btn">👤 Data Pegawai</a>
+            <a href="tujuan.html" class="nav-btn">📍 Tujuan & Biaya</a>
+            <a href="penugasan.html" class="nav-btn">✈️ Penugasan Dinas</a>
+            <a href="forum.html" class="nav-btn" style="background-color: #f39c12; color: white; border-color: #f39c12;">💬 Forum Sosial</a>
+        </div>
+
+        <div class="form-section no-print">
+            <h3>Form Penugasan Dinas</h3>
+            <form id="dinasForm">
+                <input type="hidden" id="editDinasId">
+                <div class="form-group" style="margin-top: 25px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
+                    <label>Jenis Laporan <span style="color:red">*</span></label>
+                    <select id="jenisLaporan" required onchange="toggleFormLaporan()" style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid #94a3b8; font-weight: bold; color: #1e293b; background-color: #f8fafc;">
+                        <option value="">--- Pilih Jenis Laporan ---</option>
+                        <option value="Humas">Laporan Humas / Publikasi</option>
+                        <option value="FasilitasiHumas">Laporan Fasilitasi Publikasi Humas</option>
+                        <option value="Sosper">Laporan Sosper</option>
+                        <option value="Sosrev">Laporan Sosrev</option>
+                        <option value="SosperDewan">Laporan Sosper (Anggota Dewan)</option>
+                        <option value="SosrevDewan">Laporan Sosrev (Anggota Dewan)</option>
+                        <option value="DewanBanggar">Laporan Banggar Dewan</option>
+                        <option value="StafBanggar">Laporan Banggar Staf</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group"><label>Pilih Pelaksana:</label><select id="dinasPegawaiSelect" required><option value="">-- Ketik Nama atau NIP Pelaksana --</option></select></div>
+                    <div class="form-group"><label>Keterangan Tujuan:</label><select id="jenisTujuan" required onchange="toggleTujuan()"><option value="">-- Pilih Jenis Tujuan --</option><option value="Dalam Daerah">Dalam Daerah</option><option value="Luar Daerah">Luar Daerah</option></select></div>
+                    <div class="form-group" id="containerLokasi" style="display: none;"><label>Lokasi Tujuan:</label><select id="lokasiTujuan" required onchange="updateRincianBiaya()"><option value="">-- Pilih Lokasi --</option></select></div>
+                </div>
+
+                <!-- WADAH INFORMASI REFERENSI YANG DIPERLUAS -->
+                <div class="form-row" id="containerRincianBiaya" style="display: none; background: #e4f1fe; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed #2980b9; width: 100%; flex-wrap: wrap;">
+                    <h4 style="width: 100%; margin-top:0; margin-bottom: 15px; color: #2980b9;">ℹ️ Informasi Referensi Biaya Tujuan (Otomatis)</h4>
+                    
+                    <div class="form-group" style="min-width: 200px;"><label>Uang Harian:</label><input type="text" id="infoUangHarian" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Pagu Hotel (Gol I-III):</label><input type="text" id="infoPaguHotel1" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Pagu Hotel (Gol IV):</label><input type="text" id="infoPaguHotel2" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Pagu Hotel (Es II & Dewan):</label><input type="text" id="infoPaguHotel3" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Uang Representasi:</label><input type="text" id="infoUangRepresentasi" readonly class="input-disabled"></div>
+
+                    <div style="width: 100%; height: 1px; background: #b0c4de; margin: 10px 0;"></div>
+
+                    <div class="form-group" style="min-width: 200px;"><label>Bunyi Berangkat:</label><input type="text" id="infoBerangkat" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Biaya Berangkat:</label><input type="text" id="infoBiayaBerangkat" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Bunyi Pulang:</label><input type="text" id="infoPulang" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Biaya Pulang:</label><input type="text" id="infoBiayaPulang" readonly class="input-disabled"></div>
+                    <div class="form-group" style="min-width: 200px;"><label>Maksimal Harga Tiket PP:</label><input type="text" id="infoHargaTiketPp" readonly class="input-disabled"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tanggal SPD Dibuat</label>
+                        <input type="date" id="dinasTglSpd" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nomor Nota Dinas (Nodin):</label>
+                        <input
+                            type="text"
+                            id="dinasNodin"
+                            required
+                            placeholder="Contoh: ND-102/Sec/2026"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nomor SPT:</label>
+                        <input
+                            type="text"
+                            id="dinasSpt"
+                            required
+                            inputmode="numeric"
+                            placeholder="090/......../IX/2026"
+                        >
+                        <small style="display:block; color:#64748b; margin-top:5px;">
+                            Ketik angka nomor urut saja. Awalan, bulan Romawi,
+                            dan tahun dibuat otomatis.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nomor SPD:</label>
+                        <input
+                            type="text"
+                            id="dinasSpd"
+                            required
+                            inputmode="numeric"
+                            placeholder="......../SPD/KD/SET/IX/2026"
+                        >
+                        <small style="display:block; color:#64748b; margin-top:5px;">
+                            Ketik angka nomor urut saja. Format menyesuaikan jenis
+                            tujuan dan Tanggal SPD Dibuat.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group"><label>Tanggal Berangkat:</label><input type="date" id="tglBerangkat" required></div>
+                    <div class="form-group"><label>Tanggal Kepulangan:</label><input type="date" id="tglKepulangan" required></div>
+                    <div class="form-group"><label>Durasi Tugas (Hari):</label><input type="number" id="durasi" readonly placeholder="Otomatis Terhitung" class="input-disabled"></div>
+                </div>
+                
+                <div id="formSosper" style="display: none; background: #f1f5f9; padding: 20px; border-radius: 8px; margin-top: 15px; border: 1px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                    <h5 style="margin-top: 0; margin-bottom: 15px; color: #0f172a; font-size: 15px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">📝 Form Khusus Laporan</h5>
+                    <div class="form-group" id="groupNamaDewan"><label>Nama Anggota Dewan Pendamping</label><select id="dewanId" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;"><option value="">-- Memuat Data Dewan... --</option></select></div>
+                    <div class="form-group"><label id="labelRaperdaTema">Raperda yang Dibahas / Tema Kegiatan</label><input type="text" id="raperda" placeholder="Cth: Nomor 10 Tahun 2019 Tentang Kepemudaan"></div>
+                    
+                    <!-- KOTAK KEPERLUAN YANG DIPINDAHKAN -->
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>Keperluan / Agenda Penugasan:</label>
+                        <textarea id="keperluan" rows="3" required placeholder="Tuliskan detail agenda perjalanan dinas" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;" id="gridPelaksanaan">
+                        <div style="background: #fff; padding: 15px; border: 1px solid #cbd5e1; border-radius: 6px;" id="boxTitik1">
+                            <b style="font-size: 13px; color: #3b82f6;" id="titleTitik1">📍 TITIK 1</b>
+                            <div class="form-group" style="margin-top: 10px;"><label id="labelTglTitik1">Hari dan Tanggal Titik 1</label><input type="date" id="tglTitik1"></div>
+                            <div class="form-group"><label id="labelWaktuTitik1">Waktu Titik 1</label><input type="text" id="waktuTitik1" placeholder="Cth: 09.00 - 12.00 WITA"></div>
+                            <div class="form-group"><label id="labelTempatTitik1">Tempat Titik 1</label><input type="text" id="tempatTitik1" placeholder="Cth: Desa Sukamaju, Kec. Bumi Raya"></div>
+                        </div>
+                        <div style="background: #fff; padding: 15px; border: 1px solid #cbd5e1; border-radius: 6px;" id="boxTitik2">
+                            <b style="font-size: 13px; color: #10b981;">📍 TITIK 2 (OPSIONAL APABILA STAMPNYA 2)</b>
+                            <div class="form-group" style="margin-top: 10px;"><label>Hari dan Tanggal Titik 2</label><input type="date" id="tglTitik2"></div>
+                            <div class="form-group"><label>Waktu Titik 2</label><input type="text" id="waktuTitik2" placeholder="Cth: 14.00 - 17.00 WITA"></div>
+                            <div class="form-group"><label>Tempat Titik 2</label><input type="text" id="tempatTitik2" placeholder="Cth: Gedung Serbaguna Desa"></div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div class="form-group"><label>Narasumber 1</label><input type="text" id="narasumber1" placeholder="Nama Narasumber 1"><input type="text" id="materi1" placeholder="Materi Narsum 1" style="margin-top: 8px; display: none;"></div>
+                        <div class="form-group"><label>Narasumber 2</label><input type="text" id="narasumber2" placeholder="Nama Narasumber 2"><input type="text" id="materi2" placeholder="Materi Narsum 2" style="margin-top: 8px; display: none;"></div>
+                        <div class="form-group"><label>Narasumber 3</label><input type="text" id="narasumber3" placeholder="Nama Narasumber 3"><input type="text" id="materi3" placeholder="Materi Narsum 3" style="margin-top: 8px; display: none;"></div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group"><label>Moderator</label><input type="text" id="moderator" placeholder="Nama Moderator"></div>
+                        <div class="form-group"><label>MC (Pembawa Acara)</label><input type="text" id="mc" placeholder="Nama MC"></div>
+                    </div>
+                    <div class="form-group" style="margin-top: 5px;">
+                        <label id="labelHasilKomparasi">Poin yang Berkembang (Tanya/Jawab/Materi)</label>
+                        <textarea id="poinBerkembang" rows="4" placeholder="Cth:- Pencegahan Kekerasan terhadap Perempuan..." style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    <div class="form-group" id="wadahKesimpulan" style="margin-top: 5px; display: none;">
+                        <label>Kesimpulan Laporan</label>
+                        <textarea id="kesimpulanDinas" rows="3" placeholder="Ketik kesimpulan laporan di sini..." style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group"><label>Tanggal Kegiatan Dilaksanakan:</label><input type="date" id="tglKegiatan" required></div>
+                    <div class="form-group"><label>Waktu Kegiatan:</label><input type="text" id="waktuKegiatan" required placeholder="Contoh: Pukul 10.00 WITA"></div>
+                </div>
+
+                <div class="form-row" style="background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 15px;">
+                    <div class="form-group" style="margin-bottom:0;"><label>Nama Penginapan/Hotel (Opsional):</label><input type="text" id="penginapan" placeholder="Contoh: Hotel Aston"></div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Harga Hotel Pengeluaran Aktual (Total):</label>
+                        <input type="number" id="hargaHotel" class="hitung-total" placeholder="0">
+                        <!-- TEKS HINT TELAH DIPERBARUI -->
+                        <small style="display: block; color: #d35400; margin-top: 5px; font-size: 11px;">*Otomatis terisi 30% x Pagu Hotel (berdasarkan deteksi Pangkat/Jabatan) x (Durasi Tugas - 1). Nilai ini tetap dapat Anda edit manual jika diperlukan.</small>
+                    </div>
+                </div>
+
+                <div id="containerPenerbangan" style="display: none; background: #fff5e6; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed #e67e22; width: 100%;">
+                    <h4 style="margin-top:0; margin-bottom: 15px; color: #d35400;">✈️ Detail Tiket Penerbangan (Khusus Luar Daerah - Opsional)</h4>
+                    <div class="form-row">
+                        <div class="form-group"><label>Tgl Tiket Berangkat:</label><input type="date" id="tglTiketBerangkat"></div>
+                        <div class="form-group"><label>Maskapai Berangkat:</label><input type="text" id="maskapaiBerangkat" placeholder="Contoh: Garuda"></div>
+                        <div class="form-group"><label>No. Tiket Berangkat:</label><input type="text" id="noTiketBerangkat"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Kode Booking Berangkat:</label><input type="text" id="kodeBookingBerangkat"></div>
+                        <div class="form-group"><label>Harga Tiket Berangkat:</label><input type="number" id="hargaTiketBerangkat" class="hitung-total" placeholder="0"></div>
+                    </div>
+                    <div class="form-row" style="margin-top: 15px; border-top: 1px dashed #e67e22; padding-top: 15px;">
+                        <div class="form-group"><label>Tgl Tiket Kepulangan:</label><input type="date" id="tglTiketPulang"></div>
+                        <div class="form-group"><label>Maskapai Kepulangan:</label><input type="text" id="maskapaiPulang" placeholder="Contoh: Lion Air"></div>
+                        <div class="form-group"><label>No. Tiket Kepulangan:</label><input type="text" id="noTiketPulang"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Kode Booking Kepulangan:</label><input type="text" id="kodeBookingPulang"></div>
+                        <div class="form-group"><label>Harga Tiket Kepulangan:</label><input type="number" id="hargaTiketPulang" class="hitung-total" placeholder="0"></div>
+                    </div>
+                    <div class="form-row" style="margin-top: 15px; border-top: 1px dashed #e67e22; padding-top: 15px;">
+                        <div class="form-group"><label>Keterangan Tiket/Tujuan:</label><input type="text" id="keteranganTiket" placeholder="Contoh: Transit di Jakarta..."></div>
+                        <div class="form-group"><label>Total Keseluruhan Tiket Pesawat:</label><input type="text" id="totalKeseluruhan" readonly class="input-disabled" style="font-weight:bold; color:#c0392b; font-size: 15px;"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group"><label>Link Publikasi Dokumentasi:</label><input type="url" id="dinasLinkBerita" placeholder="Contoh: https://website.go.id/berita"></div>
+                    <div class="form-group"><label>Tanggal Laporan Dibuat:</label><input type="date" id="dinasTglDibuat" required></div>
+                </div>
+
+                <!-- TOTAL ESTIMASI KALKULASI PINTAR -->
+                <div class="form-row" style="background: #e8f5e9; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed #27ae60; width: 100%;">
+                    <div class="form-group" style="width: 100%; margin-bottom: 0;">
+                        <label style="color: #27ae60; font-size: 14px; font-weight: bold;">Total Seluruh Pengeluaran Biaya Dinas:</label>
+                        <input type="text" id="totalBiayaDinas" readonly class="input-disabled" style="font-weight:bold; color:#27ae60; font-size: 20px; border: none; background: transparent; padding: 5px 0 0 0;" placeholder="Rp0">
+                        <small style="display: block; color: #64748b; margin-top: 5px; font-style: italic;">*Kalkulasi: (Uang Harian × Durasi Tugas) + Biaya Berangkat + Biaya Pulang + Harga Hotel Aktual (Input) + Uang Representasi (Aktif Khusus Anggota DPRD)</small>
+                    </div>
+                </div>
+                <!-- AREA UNGGAH DOKUMENTASI KEGIATAN -->
+                <div class="form-row" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px dashed #3b82f6; margin-bottom: 20px; width: 100%; display: flex; flex-direction: column; gap: 5px;">
+                    <div class="form-group" style="width: 100%; margin: 0;">
+                        <label style="color: #d35400; font-weight: bold;">📸 Dokumentasi Titik 1 (Maks 6 Foto):</label>
+                        <input type="file" id="dinasDokumentasi1" accept="image/jpeg, image/png, image/webp" multiple onchange="previewDokumentasiDinas(this, 1)" style="font-size: 12px; width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; background: #fff; cursor: pointer;">
+                        <div id="previewDokumentasi1" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;"></div>
+                    </div>
+                    <div class="form-group" style="width: 100%; margin: 0; border-top: 1px dashed #cbd5e1; padding-top: 15px; margin-top: 10px;">
+                        <label style="color: #d35400; font-weight: bold;">📸 Dokumentasi Titik 2 (Maks 6 Foto):</label>
+                        <input type="file" id="dinasDokumentasi2" accept="image/jpeg, image/png, image/webp" multiple onchange="previewDokumentasiDinas(this, 2)" style="font-size: 12px; width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; background: #fff; cursor: pointer;">
+                        <div id="previewDokumentasi2" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;"></div>
+                    </div>
+                </div>
+                
+                <div id="aksiFormDinas" style="display: none; align-items: center; gap: 10px;">
+                    <button type="submit" class="btn btn-save">
+                        Simpan Data Tugas
+                    </button>
+
+                    <button type="button" class="btn btn-delete" onclick="resetFormDinas()">
+                        Batal / Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-section no-print">
+            <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h2 style="margin: 0;">Laporan Riwayat Perjalanan Dinas</h2>
+                <div id="exportButtonsContainer" style="display: flex; gap: 10px;">
+                    
+                    <!-- KODE BARU: Tombol Cetak Pilihan (Bulk) -->
+                    <button type="button" class="btn" id="btnBulkPrint" onclick="bulkPrintTerpilih()" style="background-color: #8b5cf6; color: white; padding: 8px 12px; font-size: 12px; box-shadow: 0 3px 6px rgba(139, 92, 246, 0.3);">🖨️ Cetak Pilihan (Bulk)</button>
+
+                    <button type="button" class="btn" onclick="exportExcel()" style="background-color: #27ae60; color: white; padding: 8px 12px; font-size: 12px;">📊 Export Excel</button>
+                    <button type="button" class="btn" onclick="exportPDF()" style="background-color: #e74c3c; color: white; padding: 8px 12px; font-size: 12px;">📄 Export PDF</button>
+                </div>
+            </div>
+            
+            <!-- (Bagian Pencarian / Filter Tetap Sama, Lewati Saja) -->
+            <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="searchDinas" placeholder="🔍 Cari Nama, NIP, Dokumen, Tujuan..." style="flex: 1; min-width: 250px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="font-size: 13px; font-weight: bold; color: #2c3e50;">Rentang Tgl:</label>
+                    <input type="date" id="searchTanggalMulai" style="padding: 9px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px;" title="Dari Tanggal">
+                    <span style="font-size: 13px; font-weight: bold; color: #2c3e50;">s.d</span>
+                    <input type="date" id="searchTanggalAkhir" style="padding: 9px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px;" title="Sampai Tanggal">
+                </div>
+                <button type="button" class="btn" onclick="resetPencarian()" style="padding: 10px 15px; background-color: #95a5a6; color: white;">Reset Filter</button>
+            </div>
+            
+            <table id="tabelDinas">
+                <thead>
+                    <tr>
+                        <!-- KODE BARU: Kolom Checkbox Centang Semua -->
+                        <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllDinas" onchange="toggleSelectAllDinas(this)" style="width: 16px; height: 16px; cursor: pointer;"></th>
+                        <th>No</th>
+                        <th>Foto</th>
+                        <th>NIP / Nama Pegawai</th>
+                        <th>Nomor Dokumen</th>
+                        <th>Tujuan Pelaksanaan</th>
+                        <th>Waktu Pelaksanaan</th>
+                        <th>Keperluan Agenda</th>
+                        <th>Informasi Berita</th>
+                        <th>Aksi Laporan</th>
+                    </tr>
+                </thead>
+                <tbody id="dinasDataBody"></tbody>
+            </table>
+            <div id="paginationControls" style="display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 15px; margin-bottom: 25px;"></div>
+        </div>
+        <div id="printTemplate" class="print-only"></div>
+    </div>
+
+    <script src="Javascript/penugasan.js?v=12"></script>
+    <script src="Javascript/Cetak/cetak_kopsurat.js"></script>
+    <script src="Javascript/Cetak/cetak_humas.js"></script>
+    <script src="Javascript/Cetak/cetak_sosper.js"></script>
+    <script src="Javascript/Cetak/cetak_sosrev.js"></script>
+    <script src="Javascript/Cetak/cetak_dewan.js"></script>
+    <script src="Javascript/Cetak/cetak_fasilitasihumas.js"></script>
+    <script src="Javascript/Cetak/cetak_dewanbanggar.js"></script>
+    <script src="Javascript/Cetak/cetak_stafbanggar.js"></script>
+    <script src="Javascript/Cetak/cetak_rill.js?v=2"></script>
+    <script src="Javascript/Cetak/cetak_dokumentasi.js"></script>
+    <script src="Javascript/gembok.js"></script>
+</body>
+</html>

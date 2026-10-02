@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Dinas - Maintenance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            /* Latar belakang gelap futuristik ala luar angkasa */
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: #f8fafc;
+        }
+
+        /* ================= OBJEK UNIK 1: PARTIKEL KUNANG-KUNANG ================= */
+        #fireflies-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .firefly {
+            position: absolute;
+            bottom: -10px;
+            width: 6px;
+            height: 6px;
+            background-color: #a8ff78; /* Hijau/Kuning khas Firefly */
+            border-radius: 50%;
+            box-shadow: 0 0 10px #a8ff78, 0 0 20px #78ffd6;
+            animation: floatUp ease-in infinite, blink ease-in-out infinite;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+        }
+
+        @keyframes blink {
+            0%, 100% { box-shadow: 0 0 5px #a8ff78, 0 0 10px #78ffd6; }
+            50% { box-shadow: 0 0 15px #a8ff78, 0 0 30px #78ffd6; background-color: #fff; }
+        }
+
+        /* ================= WADAH KONTEN (GLASSMORPHISM) ================= */
+        .maintenance-box {
+            position: relative;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(168, 255, 120, 0.05);
+            animation: fadeIn 1s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ================= OBJEK UNIK 2: CINCIN MECHA / RADAR ================= */
+        .image-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinning-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 3px dashed rgba(168, 255, 120, 0.6);
+            border-radius: 50%;
+            animation: spin 8s linear infinite;
+            box-shadow: 0 0 20px rgba(168, 255, 120, 0.2);
+            z-index: 1;
+        }
+
+        .spinning-ring-inner {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border: 2px dotted rgba(243, 156, 18, 0.6);
+            border-radius: 50%;
+            animation: spinReverse 12s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spinReverse { 100% { transform: rotate(-360deg); } }
+
+        /* ================= GAMBAR CHIBI FIREFLY ================= */
+        .chibi-img {
+            width: 150px;
+            height: auto;
+            position: relative;
+            z-index: 5;
+            /* Animasi melayang ringan seperti di luar angkasa */
+            animation: floating 3s ease-in-out infinite;
+            /* Filter untuk memberikan efek menyatu yang lebih cantik jika gambarnya transparan */
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* ================= TIPOGRAFI & PROGRESS BAR ================= */
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #a8ff78, #78ffd6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        p {
+            font-size: 14px;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 50%;
+            background: linear-gradient(90deg, #a8ff78, #78ffd6);
+            border-radius: 10px;
+            /* Animasi loading palsu yang bolak-balik */
+            animation: loading 2s infinite ease-in-out alternate;
+            box-shadow: 0 0 10px rgba(168, 255, 120, 0.8);
+        }
+
+        @keyframes loading {
+            0% { width: 10%; transform: translateX(0); }
+            100% { width: 40%; transform: translateX(250%); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Wadah untuk partikel kunang-kunang -->
+    <div id="fireflies-container"></div>
+
+    <div class="maintenance-box">
+        <div class="image-container">
+            <!-- Cincin Mecha yang berputar -->
+            <div class="spinning-ring"></div>
+            <div class="spinning-ring-inner"></div>
+            
+            <!-- Gambar Firefly Anda. Pastikan letaknya di folder Image -->
+            <!-- Jika filenya .png, ubah ekstensinya menjadi .png di bawah ini -->
+            <img src="Image/Chibi Firefly hsr pfp icon.png" alt="Firefly Maintenance" class="chibi-img" onerror="this.src='Image/Chibi Firefly hsr pfp icon.jpg'">
+        </div>
+        
+        <h1>SISTEM DALAM PEMELIHARAAN</h1>
+        <p>Kami sedang melakukan sinkronisasi dan peningkatan server (<i>Maintenance</i>). Mohon maaf atas ketidaknyamanannya, silakan kembali beberapa saat lagi!</p>
+        
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 15px; letter-spacing: 2px;">STATUS: OFFLINE</div>
+    </div>
+
+    <script>
+        // Skrip untuk menghasilkan partikel Kunang-kunang secara acak
+        function createFireflies() {
+            const container = document.getElementById('fireflies-container');
+            const totalFireflies = 30; // Jumlah kunang-kunang
+
+            for (let i = 0; i < totalFireflies; i++) {
+                let firefly = document.createElement('div');
+                firefly.classList.add('firefly');
+                
+                // Posisi horizontal acak
+                let randomLeft = Math.random() * 100;
+                firefly.style.left = randomLeft + 'vw';
+
+                // Durasi animasi acak agar terlihat natural
+                let randomDuration = (Math.random() * 5 + 3) + 's';
+                firefly.style.animationDuration = randomDuration + ', ' + (Math.random() * 2 + 1) + 's';
+                
+                // Delay acak agar tidak muncul bersamaan
+                let randomDelay = Math.random() * 5 + 's';
+                firefly.style.animationDelay = randomDelay;
+
+                // Ukuran acak
+                let randomSize = Math.random() * 4 + 2 + 'px';
+                firefly.style.width = randomSize;
+                firefly.style.height = randomSize;
+
+                container.appendChild(firefly);
+            }
+        }
+
+        // Jalankan saat halaman dimuat
+        window.onload = createFireflies;
+    </script>
+<!-- SENSOR OTOMATIS KEMBALI KE APLIKASI -->
+    <script>
+        setInterval(() => {
+            fetch('PHP/ping.php', { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => {
+                // Jika sistem sudah kembali merespons 'aman', arahkan kembali ke Login
+                if (data.status !== 'maintenance') {
+                    window.location.replace('index.html');
+                }
+            })
+            .catch(() => {}); // Abaikan jika masih belum terhubung
+        }, 5000); // Mengecek status server setiap 5 detik
+    </script>
+
+</body>
+</html>

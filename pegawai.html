@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Dinas - Data Pegawai</title>
+    <link rel="stylesheet" href="CSS/style.css">
+</head>
+<body>
+
+    <div class="container">
+        <div class="top-bar no-print">
+            <div class="user-info">
+                <img src="Image/default.jpg" id="topProfilePic" class="top-profile-img" onerror="this.onerror=null; this.src='Image/default.jpg';" alt="Foto">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="topProfileName" class="top-profile-name">Nama Pegawai</div>
+                        <span id="topProfileRole" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;"></span>
+                    </div>
+                    <div style="font-size: 11px; color: #27ae60; margin-top: 2px; font-weight: bold; display: flex; align-items: center;">
+                        <span class="online-dot"></span> <span id="onlineCountText">Sedang aktif</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="notif-wrapper" onclick="toggleNotifikasi(event)" title="Pemberitahuan">
+                    🔔
+                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                    <div class="notif-menu" id="notifMenu">
+                        <div class="notif-header">Pemberitahuan Baru</div>
+                        <div class="notif-body" id="notifBody">
+                            <div class="notif-empty">Tidak ada pemberitahuan baru</div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logoutSistem()" class="btn-logout">🚪 Keluar</button>
+            </div>
+        </div>
+        
+        <h1>Manajemen Perjalanan Dinas</h1>
+
+        <div class="nav-menu no-print">
+            <a href="dashboard.html" class="nav-btn active">📊 Dashboard</a>
+            <a href="pegawai.html" class="nav-btn">👤 Data Pegawai</a>
+            <a href="tujuan.html" class="nav-btn">📍 Tujuan & Biaya</a>
+            <a href="penugasan.html" class="nav-btn">✈️ Penugasan Dinas</a>
+            <a href="forum.html" class="nav-btn" style="background-color: #f39c12; color: white; border-color: #f39c12;">💬 Forum Sosial</a>
+        </div>
+
+        <div class="form-section">
+            <h3 id="formTitle">Form Input Pegawai</h3>
+            
+            <form id="pegawaiForm" class="form-container-neat">
+                <input type="hidden" id="editPegawaiId">
+
+                <div class="form-section-title pribadi">1. Informasi Pribadi</div>
+                
+                <div class="profile-layout-neat">
+                    <div class="profile-photo-column form-group-foto">
+                        <label class="custom-label" style="text-align: center;">Foto Profil</label>
+                        <img id="fotoPreview" src="Image/default.jpg" class="img-preview-neat" style="width: 130px; height: 130px; align-self: center;">
+                        <input type="file" id="pegawaiFoto" accept="image/jpeg, image/png" onchange="previewImage(this)" class="input-file-neat">
+                    </div>
+
+                    <div class="profile-info-column">
+                        <div class="form-group-grid" style="margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label class="custom-label">Nama Lengkap <span style="color:red">*</span></label>
+                                <input type="text" id="pegawaiNama" class="custom-input" required placeholder="Masukkan nama lengkap">
+                            </div>
+                            <div class="form-group" id="groupNik">
+                                <label class="custom-label">Nomor Induk Kependudukan (NIK)</label>
+                                <input type="text" id="pegawaiNik" class="custom-input" placeholder="16 Digit NIK">
+                            </div>
+                        </div>
+
+                        <div class="form-group-grid" id="groupLahir" style="margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label class="custom-label">Tempat Lahir</label>
+                                <input type="text" id="pegawaiTempatLahir" class="custom-input" placeholder="Cth: Banjarmasin">
+                            </div>
+                            <div class="form-group">
+                                <label class="custom-label">Tanggal Lahir</label>
+                                <input type="date" id="pegawaiTglLahir" class="custom-input">
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="groupAlamat" style="margin-bottom: 15px;">
+                            <label class="custom-label">Alamat Lengkap</label>
+                            <textarea id="pegawaiAlamat" rows="2" class="custom-input" placeholder="Masukkan alamat domisili lengkap" style="resize: vertical;"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-title dinas">2. Informasi Kedinasan</div>
+
+                <div class="form-group-grid">
+                    <div class="form-group" id="groupNip">
+                        <label class="custom-label">Nomor Induk Pegawai (NIP)</label>
+                        <input type="text" id="pegawaiNip" class="custom-input" placeholder="Masukkan NIP">
+                    </div>
+                    <div class="form-group" id="groupStatus">
+                        <label class="custom-label">Status Pegawai</label>
+                        <select id="pegawaiStatus" class="custom-input">
+                            <option value="">-- Pilih Status --</option>
+                            <option value="Anggota DPRD">Anggota DPRD</option>
+                            <option value="PNS">PNS / ASN</option>
+                            <option value="PPPK">PPPK</option>
+                            <option value="PPPK Paruh Waktu">PPPK Paruh Waktu</option>
+                            <option value="Honorer">Honorer / Kontrak</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group-grid">
+                    <div class="form-group" id="groupJabatan">
+                        <label class="custom-label">Jabatan</label>
+                        <input type="text" id="pegawaiJabatan" class="custom-input" placeholder="Cth: Staf Administrasi">
+                    </div>
+                    <div class="form-group" id="groupBagian">
+                        <label class="custom-label">Bagian / Sub Bagian</label>
+                        <input type="text" id="pegawaiBagian" class="custom-input" placeholder="Cth: Bagian Umum">
+                    </div>
+                </div>
+
+                <div class="form-group-grid">
+                    <div class="form-group" id="groupPangkat">
+                        <label class="custom-label">Pangkat</label>
+                        <input type="text" id="pegawaiPangkat" class="custom-input" placeholder="Cth: Penata Muda">
+                    </div>
+                    <div class="form-group" id="groupGolongan">
+                        <label class="custom-label">Golongan</label>
+                        <input type="text" id="pegawaiGolongan" class="custom-input" placeholder="Cth: III/a">
+                    </div>
+                </div>
+
+                <div class="form-section-title keamanan">3. Keamanan</div>
+
+                <div class="form-group-grid">
+                    <div class="form-group" id="groupTingkat">
+                        <label class="custom-label">Hak Akses (Role)</label>
+                        <select id="pegawaiTingkat" class="custom-input">
+                            <option value="Staf">Staf (Hanya Lihat)</option>
+                            <option value="Super Admin">Super Admin</option>
+                            <option value="Pengguna Anggaran">Pengguna Anggaran (PA)</option>
+                            <option value="God Creator">God Creator (Akses Penuh)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="groupPassword">
+                        <label class="custom-label">Password Login</label>
+                        <div class="password-wrapper-neat">
+                            <input type="password" id="pegawaiPassword" class="custom-input" placeholder="Ketik password untuk akun ini">
+                            <span class="toggle-icon-neat" onclick="toggleVisibility('pegawaiPassword', this)">👁️</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-flex-container">
+                    <button type="submit" class="btn-save-neat btn-save">💾 Simpan Data Pegawai</button>
+                    <button type="button" class="btn-cancel-neat btn-delete" onclick="resetFormPegawai()">✖ Batal</button>
+                </div>
+                <div id="bulkPegawaiContainer" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                    <div style="font-size: 13px; color: #475569; font-weight: 600;">Atau punya banyak data sekaligus? Masukkan via Excel:</div>
+                    <div style="font-size: 10px; color: #cc0000; font-weight: 450;">Pastikan Kolom Status Pegawai pada Excel mengikuti pilihan yang ada pada Kolom Status Pegawai dari Web</div>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                        <!-- Tambahan type="button" agar tidak memicu Simpan Form -->
+                        <button type="button" class="btn btn-print" onclick="downloadFormatExcel()" style="padding: 10px 20px; background-color: #3b82f6;">
+                            <span style="font-size: 16px; margin-right: 5px;">📥</span> 1. Unduh Format
+                        </button>
+                        
+                        <label class="btn btn-save" style="margin: 0; padding: 10px 20px; cursor: pointer; background-color: #10b981; display: inline-flex; align-items: center;">
+                            <span style="font-size: 16px; margin-right: 5px;">📤</span> 2. Upload Excel
+                            <input type="file" id="uploadBulkPegawai" accept=".xlsx, .xls" style="display: none;" onchange="prosesUploadBulk(this)">
+                        </label>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        <div class="table-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <h3 style="margin: 0;">Daftar Pegawai Terdaftar</h3>
+                
+                <!-- KODE BARU: Tombol Bulk Delete (Awalnya Disembunyikan) -->
+                <button type="button" class="btn btn-delete" id="btnBulkDeletePegawai" onclick="hapusBulkPegawai()" style="display: none; padding: 8px 12px; font-size: 12px; background-color: #ef4444; box-shadow: 0 3px 6px rgba(239, 68, 68, 0.3);">🗑️ Hapus Pilihan (Bulk)</button>
+            </div>
+            <div class="profile-nav" style="margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; background: #f8fafc;">
+                <button class="profile-nav-btn active" id="tabStaf" onclick="switchTabPegawai('staf')">🏢 Staf & Sekretariat</button>
+                <button class="profile-nav-btn" id="tabDewan" onclick="switchTabPegawai('dewan')">👔 Anggota DPRD</button>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="searchPegawai" class="custom-input" placeholder="🔍 Cari Nama, NIP, atau Jabatan...">
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <!-- KODE BARU: Kolom Checkbox Centang Semua (Awalnya Disembunyikan) -->
+                        <th id="thBulkPegawai" style="display: none; width: 40px; text-align: center;"><input type="checkbox" id="selectAllPegawai" onchange="toggleSelectAllPegawai(this)" style="width: 16px; height: 16px; cursor: pointer;"></th>
+                        
+                        <th style="text-align: center; width: 50px;">No</th>
+                        <th style="text-align: center; width: 70px;">Foto</th>
+                        <th>NIP / Nama</th>
+                        <th>Jabatan / Bagian</th>
+                        <th>Status</th>
+                        <th id="thKeamanan" style="display: none; text-align: center; width: 120px; vertical-align: middle;">Keamanan</th>
+                        <th style="text-align: center; width: 160px; vertical-align: middle;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="pegawaiDataBody">
+                    <tr><td colspan="8" style="text-align:center;">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="Javascript/pegawai.js"></script>
+    <script src="Javascript/gembok.js"></script>
+</body>
+</html>

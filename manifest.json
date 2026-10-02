@@ -1,0 +1,21 @@
+{
+  "name": "Sistem Dinas Kalsel",
+  "short_name": "SisDin",
+  "description": "Super App Manajemen Perjalanan Dinas Sekretariat DPRD Prov. Kalsel",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "Image/logo-kalsel.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "Image/logo-kalsel.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

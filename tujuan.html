@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistem Dinas - Referensi Tujuan</title>
+    <link rel="stylesheet" href="CSS/style.css">
+    <style>
+        /* ================= ANIMASI TITIK ONLINE ================= */
+        .online-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            margin-right: 5px;
+            box-shadow: 0 0 5px #2ecc71;
+            animation: pulse-online 2s infinite;
+        }
+
+        @keyframes pulse-online {
+            0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+            70% { box-shadow: 0 0 0 5px rgba(46, 204, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        }
+        /* ========================================================= */
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 100%; padding: 40px 20px;">
+        <div class="top-bar no-print">
+            <div class="user-info">
+                <img src="Image/default.jpg" id="topProfilePic" class="top-profile-img" onerror="this.onerror=null; this.src='Image/default.jpg';" alt="Foto">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="topProfileName" class="top-profile-name">Memuat...</div>
+                        <span id="topProfileRole" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;"></span>
+                    </div>
+                    <!-- Indikator Online -->
+                    <div style="font-size: 11px; color: #27ae60; margin-top: 2px; font-weight: bold; display: flex; align-items: center;">
+                        <span class="online-dot"></span> <span id="onlineCountText">Sedang aktif</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="notif-wrapper" onclick="toggleNotifikasi(event)" title="Pemberitahuan">
+                    🔔
+                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                    <div class="notif-menu" id="notifMenu">
+                        <div class="notif-header">Pemberitahuan Baru</div>
+                        <div class="notif-body" id="notifBody">
+                            <div class="notif-empty">Tidak ada pemberitahuan baru</div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logoutSistem()" class="btn-logout">🚪 Keluar</button>
+            </div>
+        </div>
+        <h1>Referensi Tujuan & Biaya</h1>
+        <div class="nav-menu no-print">
+            <a href="javascript:void(0)" class="nav-btn" data-target="dashboard.html" onclick="navigasiSPA('dashboard.html', this)">📊 Dashboard</a>
+            <a href="javascript:void(0)" class="nav-btn" data-target="pegawai.html" onclick="navigasiSPA('pegawai.html', this)">👤 Data Pegawai</a>
+            <a href="javascript:void(0)" class="nav-btn active" data-target="tujuan.html" onclick="navigasiSPA('tujuan.html', this)">📍 Tujuan & Biaya</a>
+            <a href="javascript:void(0)" class="nav-btn" data-target="penugasan.html" onclick="navigasiSPA('penugasan.html', this)">✈️ Penugasan Dinas</a>
+            <a href="javascript:void(0)" class="nav-btn" data-target="forum.html" onclick="navigasiSPA('forum.html', this)" style="background-color: #f39c12; color: white; border-color: #f39c12;">💬 Forum Sosial</a>
+        </div>
+
+        <div class="form-section">
+            <form id="tujuanForm">
+                <input type="hidden" id="editTujuanId">
+                
+                <!-- BARIS 1: Jenis, Tujuan, Uang Harian -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Jenis Tujuan:</label>
+                        <select id="jenisTujuanInput" required>
+                            <option value="Dalam Daerah">Dalam Daerah</option>
+                            <option value="Luar Daerah">Luar Daerah</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nama Tujuan:</label>
+                        <input type="text" id="namaTujuanInput" required placeholder="Contoh: Hulu Sungai Utara">
+                    </div>
+                    <div class="form-group">
+                        <label>Uang Harian:</label>
+                        <input type="number" id="uangHarian" class="hitung" placeholder="0">
+                    </div>
+                </div>
+                
+                <!-- BARIS 2: Rincian Pagu Maksimal Hotel -->
+                <div class="form-row">
+                    <div class="form-group"><label>Pagu Maksimal Hotel Staf Gol I-III:</label><input type="number" id="paguHotel1" class="hitung" placeholder="0"></div>
+                    <div class="form-group"><label>Pagu Maksimal Hotel Golongan IV:</label><input type="number" id="paguHotel2" class="hitung" placeholder="0"></div>
+                    <div class="form-group"><label>Pagu Maksimal Hotel Es II dan Dewan:</label><input type="number" id="paguHotel3" class="hitung" placeholder="0"></div>
+                </div>
+
+                <!-- BARIS 3: Keterangan (Bunyi) Transportasi -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bunyi Berangkat:</label>
+                        <input type="text" id="bunyiBerangkatInput" required placeholder="Contoh: Banjarmasin ke HSU">
+                    </div>
+                    <div class="form-group">
+                        <label>Bunyi Pulang:</label>
+                        <input type="text" id="bunyiPulangInput" required placeholder="Contoh: HSU ke Banjarmasin">
+                    </div>
+                    <div class="form-group">
+                        <label>Bunyi Tambahan:</label>
+                        <input type="text" id="bunyiTambahanInput" placeholder="Contoh: Transportasi Lokal">
+                    </div>
+                </div>
+
+                <!-- BARIS 4: Rincian Duit, Tiket & Representasi -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Duit Berangkat:</label>
+                        <input type="number" id="duitBerangkat" class="hitung" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Duit Pulang:</label>
+                        <input type="number" id="duitPulang" class="hitung" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Duit Tambahan:</label>
+                        <input type="number" id="duitTambahan" class="hitung">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Harga Tiket PP:</label>
+                        <input
+                            type="number"
+                            id="hargaTiketPp"
+                            class="hitung"
+                            min="0"
+                            placeholder="0"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Uang Representasi:</label>
+                        <input
+                            type="number"
+                            id="uangRepresentasi"
+                            class="hitung"
+                            placeholder="0"
+                        >
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group"><label>Total Seluruh Biaya Estimasi:</label><input type="number" id="totalDuit" readonly class="input-disabled" style="font-weight: bold; font-size: 16px;"></div>
+                </div>
+                
+                <button type="submit" class="btn btn-save">Simpan Referensi</button>
+                <button type="button" class="btn btn-delete" onclick="resetFormTujuan()" style="margin-left: 10px;">Batal / Reset</button>
+            </form>
+        </div>
+
+        <div class="table-section" style="overflow-x: auto;">
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="filterTujuan" placeholder="🔍 Cari berdasarkan Nama Tujuan atau Jenis..." style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px;">
+            </div>
+
+            <table id="tabelTujuan" style="min-width: 1500px;">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Jenis</th>
+                        <th style="width: 120px;">Tujuan</th>
+                        <th style="width: 100px;">Uang Harian</th>
+                        <th style="width: 110px;">Pagu Hotel Gol I-III</th>
+                        <th style="width: 110px;">Pagu Hotel Gol IV</th>
+                        <th style="width: 120px;">Pagu Hotel Es II & Dewan</th>
+                        <th>Bunyi Brgkt</th>
+                        <th>Bunyi Plg</th>
+                        <th>Bunyi Tmbh</th>
+                        <th>Berangkat</th>
+                        <th>Pulang</th>
+                        <th>Tambahan</th>
+                        <th style="width: 110px;">Harga Tiket PP</th>
+                        <th style="width: 100px;">Representasi</th>
+                        <th style="width: 120px;">Total Estimasi</th>
+                        <th style="width: 100px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tujuanDataBody"></tbody>
+            </table>
+
+            <div id="paginationControls" style="display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 15px; margin-bottom: 25px;"></div>
+        </div>
+    </div>
+    <script src="Javascript/tujuan.js"></script>
+    <script src="Javascript/gembok.js"></script>
+</body>
+</html>
