@@ -362,10 +362,14 @@ try {
             $notifs = [];
             while($row = $res_forum->fetch_assoc()){
                 if (strpos($row['teks'], '@' . $my_nama) !== false) { 
-                    $row['jenis_notif'] = 'mention'; 
+                    $row['jenis_notif'] = 'mention';
                 } else { 
-                    $row['jenis_notif'] = 'post_reply'; 
+                    $row['jenis_notif'] = 'post_reply';
                 }
+                // Alias field dipertahankan agar frontend lama dan baru konsisten.
+                $row['type'] = 'forum';
+                $row['post_title'] = '';
+                $row['created_at'] = $row['tgl_komentar'];
                 $notifs[] = $row;
             }
 
@@ -379,11 +383,15 @@ try {
             while($row_chat = $res_chat->fetch_assoc()){
                 $notifs[] = [
                     'jenis_notif' => 'chat',
+                    'type' => 'chat',
                     'chat_id' => $row_chat['chat_id'],
                     'sender_id' => $row_chat['sender_id'],
                     'commenter_name' => $row_chat['sender_name'],
                     'tgl_komentar' => $row_chat['created_at'],
-                    'teks' => $row_chat['message']
+                    'created_at' => $row_chat['created_at'],
+                    'teks' => $row_chat['message'],
+                    'message' => $row_chat['message'],
+                    'message_short' => mb_substr($row_chat['message'], 0, 80)
                 ];
             }
 
@@ -443,6 +451,24 @@ try {
             $stmt->execute();
             $stmt->close();
 
+            echo json_encode(["status" => "success"]);
+            exit;
+        }
+        elseif ($action == 'mark_chat_read') {
+            $my_id = (string)$_SESSION['pegawai_id'];
+            $target_id = trim((string)($data['target_id'] ?? ''));
+            if ($target_id === '') {
+                http_response_code(400);
+                echo json_encode(["status" => "error", "message" => "Kontak tidak valid."]);
+                exit;
+            }
+
+            $stmt = $conn->prepare(
+                "UPDATE private_chats SET is_read = 1 WHERE sender_id = ? AND receiver_id = ?"
+            );
+            $stmt->bind_param("ss", $target_id, $my_id);
+            $stmt->execute();
+            $stmt->close();
             echo json_encode(["status" => "success"]);
             exit;
         }

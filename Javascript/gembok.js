@@ -899,6 +899,21 @@ window.renderContactsList = function(contacts) {
     list.innerHTML = html;
 }
 
+window.markChatRead = async function(targetId) {
+    if (!targetId) return false;
+    try {
+        const response = await fetch('PHP/api_forum.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'mark_chat_read', target_id: String(targetId)})
+        });
+        const result = await response.json();
+        return response.ok && result.status === 'success';
+    } catch (error) {
+        return false;
+    }
+};
+
 window.openChat = function(id, nama) {
     chatActiveTargetId = id; lastMessagesData = ""; currentChatOffset = 0; hasMoreChats = true;
     
@@ -908,6 +923,10 @@ window.openChat = function(id, nama) {
     document.getElementById('chatConversationView').style.display = 'flex';
     document.getElementById('chatMessagesList').innerHTML = '<div style="text-align:center; padding:20px; font-size:12px; color:#94a3b8;"><span class="spinner"></span> Memuat pesan...</div>';
     
+    markChatRead(id).then(() => {
+        checkUnreadChatsUIOnly();
+        cekNotifikasiLonceng();
+    });
     fetchPrivateChats();
 }
 
