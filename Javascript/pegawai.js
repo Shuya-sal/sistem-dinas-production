@@ -114,7 +114,7 @@ function previewImage(input) {
     }; reader.readAsDataURL(file);
 }
 
-function resetFormPegawai() {
+window.resetFormPegawai = function() {
     const formPegawai = document.getElementById('pegawaiForm'); if(!formPegawai) return;
     formPegawai.reset(); document.getElementById('editPegawaiId').value = ''; document.getElementById('fotoPreview').src = placeholderFotoPegawai; currentFotoBase64Pegawai = null;
     const passInput = document.getElementById('pegawaiPassword'); if (passInput) { passInput.required = true; passInput.placeholder = 'Buat password login'; }
@@ -224,17 +224,45 @@ function renderPaginationPegawai(totalPages) {
     nextBtn.disabled = (currentPagePegawai === totalPages); nextBtn.onclick = () => { if (currentPagePegawai < totalPages) fetchPegawai(currentPagePegawai + 1); }; paginationContainer.appendChild(nextBtn);
 }
 
-async function editPegawai(id) {
-    try {
-        const response = await fetch(`PHP/api_pegawai.php?limit=all`); const result = await response.json(); const p = result.data.find(x => x.id == id);
-        if(p && document.getElementById('pegawaiForm')) {
-            document.getElementById('editPegawaiId').value = p.id; document.getElementById('pegawaiNama').value = p.nama; document.getElementById('pegawaiNip').value = p.nip; document.getElementById('pegawaiJabatan').value = p.jabatan; document.getElementById('pegawaiPangkat').value = p.pangkat; document.getElementById('pegawaiGolongan').value = p.golongan; document.getElementById('pegawaiBagian').value = p.bagian; document.getElementById('pegawaiStatus').value = p.status; document.getElementById('pegawaiTingkat').value = p.tingkat || 'Staf';
-            if(document.getElementById('pegawaiNik')) document.getElementById('pegawaiNik').value = p.nik || ''; if(document.getElementById('pegawaiTempatLahir')) document.getElementById('pegawaiTempatLahir').value = p.tempat_lahir || ''; if(document.getElementById('pegawaiTglLahir')) document.getElementById('pegawaiTglLahir').value = p.tgl_lahir || ''; if(document.getElementById('pegawaiAlamat')) document.getElementById('pegawaiAlamat').value = p.alamat || '';
-            const passInput = document.getElementById('pegawaiPassword'); passInput.value = ''; passInput.required = false; passInput.placeholder = 'Kosongkan jika tidak ingin mengubah password';
-            document.getElementById('fotoPreview').src = p.foto || placeholderFotoPegawai; document.getElementById('pegawaiFoto').value = ""; currentFotoBase64Pegawai = null; document.getElementById('formTitle').innerText = "✏️ Mode Edit Data Pegawai";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    } catch(e) {}
+window.editPegawai = async function(id) {
+    // Pakai data baris yang sudah dimuat agar tombol edit tetap responsif
+    // dan tidak perlu menarik seluruh tabel pegawai dari server.
+    let p = (Array.isArray(dbPegawai) ? dbPegawai : []).find(x => String(x.id) === String(id));
+
+    if (!p) {
+        try {
+            const response = await fetch('PHP/api_pegawai.php?id=' + encodeURIComponent(id));
+            const result = await response.json();
+            if (result.status === 'success' && result.data) p = result.data;
+            else { alert("Data pegawai tidak ditemukan di server."); return; }
+        } catch (e) { alert("Gagal mengambil data pegawai untuk diedit."); return; }
+    }
+
+    if (document.getElementById('pegawaiForm')) {
+        const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = (val === null || val === undefined) ? '' : val; };
+        setVal('editPegawaiId', p.id);
+        setVal('pegawaiNama', p.nama);
+        setVal('pegawaiNip', p.nip);
+        setVal('pegawaiJabatan', p.jabatan);
+        setVal('pegawaiPangkat', p.pangkat);
+        setVal('pegawaiGolongan', p.golongan);
+        setVal('pegawaiBagian', p.bagian);
+        setVal('pegawaiStatus', p.status);
+        setVal('pegawaiTingkat', p.tingkat || 'Staf');
+        setVal('pegawaiNik', p.nik);
+        setVal('pegawaiTempatLahir', p.tempat_lahir);
+        setVal('pegawaiTglLahir', p.tgl_lahir);
+        setVal('pegawaiAlamat', p.alamat);
+
+        const passInput = document.getElementById('pegawaiPassword');
+        if (passInput) { passInput.value = ''; passInput.required = false; passInput.placeholder = 'Kosongkan jika tidak ingin mengubah password'; }
+
+        document.getElementById('fotoPreview').src = p.foto || placeholderFotoPegawai;
+        currentFotoBase64Pegawai = null;
+        const fotoInput = document.getElementById('pegawaiFoto'); if (fotoInput) fotoInput.value = "";
+        document.getElementById('formTitle').innerText = "✏️ Mode Edit Data Pegawai";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
 
 async function hapusPegawai(id) {

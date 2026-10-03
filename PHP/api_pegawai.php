@@ -140,6 +140,39 @@ try {
             exit;
         }
 
+        // Data satu pegawai untuk form edit. Dikirim ringkas tanpa kolom
+        // besar (foto Base64 / stiker) agar tidak putus di shared hosting.
+        if (isset($_GET['id'])) {
+            $single_id = trim((string)$_GET['id']);
+            if ($single_id === '' || strlen($single_id) > 100) {
+                http_response_code(400);
+                echo json_encode(["status" => "error", "message" => "ID pegawai tidak valid."]);
+                exit;
+            }
+
+            $single_stmt = $conn->prepare("SELECT id, nama, nip, jabatan, pangkat, golongan, bagian, status, tingkat,
+                                                  nik, tempat_lahir, tgl_lahir, alamat,
+                                                  (foto IS NOT NULL AND foto <> '') AS has_foto
+                                           FROM pegawai WHERE id = ? LIMIT 1");
+            $single_stmt->bind_param("s", $single_id);
+            $single_stmt->execute();
+            $single_result = $single_stmt->get_result();
+            $single_row = $single_result->fetch_assoc();
+            $single_stmt->close();
+
+            if (!$single_row) {
+                http_response_code(404);
+                echo json_encode(["status" => "error", "message" => "Pegawai tidak ditemukan."]);
+                exit;
+            }
+
+            $single_row['foto'] = !empty($single_row['has_foto']) ? makeEmployeeMediaUrl($single_row['id'], 'avatar') : '';
+            unset($single_row['has_foto']);
+
+            echo json_encode(["status" => "success", "data" => $single_row]);
+            exit;
+        }
+
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
         $limit_param = isset($_GET['limit']) ? $_GET['limit'] : '10';
         
