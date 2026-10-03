@@ -1,12 +1,37 @@
 <?php
-// Kredensial Pusher wajib disediakan melalui environment hosting.
+// Kredensial dibaca dari environment atau file di luar public_html.
 function getPusherConfig() {
-    return [
+    $config = [
         'app_id' => trim((string)getenv('PUSHER_APP_ID')),
         'key' => trim((string)getenv('PUSHER_KEY')),
         'secret' => trim((string)getenv('PUSHER_SECRET')),
         'cluster' => trim((string)(getenv('PUSHER_CLUSTER') ?: 'ap1'))
     ];
+
+    // PHP/api_*.php berada di public_html/PHP; dirname(dirname(__DIR__))
+    // menunjuk ke home akun cPanel, bukan document root.
+    if (!isPusherConfiguredValues($config)) {
+        $config_file = dirname(dirname(__DIR__)) . '/pusher-config.php';
+        if (is_file($config_file) && is_readable($config_file)) {
+            $file_config = require $config_file;
+            if (is_array($file_config)) {
+                $config = array_merge($config, array_intersect_key($file_config, $config));
+                foreach ($config as $name => $value) {
+                    $config[$name] = trim((string)$value);
+                }
+            }
+        }
+    }
+
+    return $config;
+}
+
+function isPusherConfiguredValues($config) {
+    return is_array($config)
+        && $config['app_id'] !== ''
+        && $config['key'] !== ''
+        && $config['secret'] !== ''
+        && $config['cluster'] !== '';
 }
 
 function isPusherConfigured() {
