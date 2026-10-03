@@ -27,6 +27,127 @@ function employeeMediaUrlForum($employee_id, $media_type) {
     return 'PHP/api_pegawai.php?media=' . rawurlencode($media_type) . '&id=' . rawurlencode($employee_id);
 }
 
+// Mencatat notifikasi forum per penerima berdasarkan nama lengkap pegawai.
+// Dipanggil setelah komentar tersimpan; kegagalan di sini tidak boleh
+// menggagalkan penyimpanan komentar.
+function forumQueueNotifications($conn, $comment_id, $post_id, $actor_id, $comment_text) {
+    try {
+        $targets = [];
+        $post_owner_raw = '';
+        $post_owner = '';
+        $stmt_post = $conn->prepare("SELECT pegawai_id FROM forum_posts WHERE id = ? LIMIT 1");
+        if ($stmt_post) {
+            $stmt_post->bind_param("s", $post_id);
+            $stmt_post->execute();
+            $stmt_post->bind_result($post_owner_raw);
+            if ($stmt_post->fetch()) {
+                $post_owner = trim((string)$post_owner_raw);
+            }
+            $stmt_post->close();
+        }
+
+        if ($post_owner !== '') {
+            $stmt_owner = $conn->prepare("SELECT id, nama FROM pegawai WHERE id = ? OR nama = ? LIMIT 1");
+            if ($stmt_owner) {
+                $stmt_owner->bind_param("ss", $post_owner, $post_owner);
+                $stmt_owner->execute();
+                $res_owner = $stmt_owner->get_result();
+                if ($row_owner = $res_owner->fetch_assoc()) {
+                    if ((string)$row_owner['id'] !== (string)$actor_id) {
+                        $targets[(string)$row_owner['id']] = 'post_reply';
+                    }
+                }
+                $stmt_owner->close();
+            }
+        }
+
+        $stmt_users = $conn->prepare("SELECT id, nama FROM pegawai WHERE nama IS NOT NULL AND nama <> ''");
+        if ($stmt_users) {
+            $stmt_users->execute();
+            $res_users = $stmt_users->get_result();
+            $candidates = [];
+            while ($row_user = $res_users->fetch_assoc()) {
+                $full_name = trim((string)$row_user['nama']);
+                if ($full_name === '' || (string)$row_user['id'] === (string)$actor_id) continue;
+                $candidates[] = ["id" => (string)$row_user['id'], "nama" => $full_name];
+            }
+            $stmt_users->close();
+
+            // Nama terpanjang dicocokkan lebih dulu agar "Devi Atika" tidak
+            // kalah oleh nama yang lebih pendek.
+            usort($candidates, function($a, $b) {
+                return strlen($b['nama']) - strlen($a['nama']);
+            });
+
+            $decoded = html_entity_decode((string)$comment_text, ENT_QUOTES, 'UTF-8');
+            foreach ($candidates as $candidate) {
+                if (stripos($decoded, '@' . $candidate['nama']) !== false) {
+                    $targets[$candidate['id']] = 'mention';
+                }
+            }
+        }
+
+        if (empty($targets)) return;
+
+        $stmt_insert = $conn->prepare("INSERT IGNORE INTO forum_notifications (id, pegawai_id, comment_id, post_id, actor_id, jenis) VALUES (?, ?, ?, ?, ?, ?)");
+        if (!$stmt_insert) return;
+        foreach ($targets as $target_id => $jenis) {
+            $notif_id = bin2hex(random_bytes(16));
+            $stmt_insert->bind_param("ssssss", $notif_id, $target_id, $comment_id, $post_id, $actor_id, $jenis);
+            $stmt_insert->execute();
+        }
+        $stmt_insert->close();
+    } catch (Exception $e) {}
+}
+
+// Mengisi notifikasi mention untuk komentar lama yang belum punya baris di
+// forum_notifications, sehingga mention yang terlanjur terlewat tetap muncul.
+function forumBackfillMentions($conn, $my_id, $my_nama) {
+    try {
+        $my_id = (string)$my_id;
+        $my_nama = trim((string)$my_nama);
+        if ($my_nama === '') return;
+
+        $needle = '%@' . $my_nama . '%';
+        $stmt = $conn->prepare(
+            "SELECT c.id as comment_id, c.post_id, c.pegawai_id, c.teks
+             FROM forum_comments c
+             WHERE c.teks LIKE ?
+               AND c.pegawai_id <> ?
+               AND c.tgl_komentar >= (NOW() - INTERVAL 180 DAY)
+               AND NOT EXISTS (
+                   SELECT 1 FROM forum_notifications fn
+                   WHERE fn.comment_id = c.id AND fn.pegawai_id = ?
+               )
+             ORDER BY c.tgl_komentar DESC
+             LIMIT 200"
+        );
+        if (!$stmt) return;
+        $stmt->bind_param("sss", $needle, $my_id, $my_id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = [];
+        while ($row = $res->fetch_assoc()) { $rows[] = $row; }
+        $stmt->close();
+        if (empty($rows)) return;
+
+        $insert = $conn->prepare(
+            "INSERT IGNORE INTO forum_notifications (id, pegawai_id, comment_id, post_id, actor_id, jenis)
+             VALUES (?, ?, ?, ?, ?, 'mention')"
+        );
+        if (!$insert) return;
+        foreach ($rows as $row) {
+            $text = html_entity_decode((string)$row['teks'], ENT_QUOTES, 'UTF-8');
+            if (stripos($text, '@' . $my_nama) === false) continue;
+            $notif_id = bin2hex(random_bytes(16));
+            $actor = (string)$row['pegawai_id'];
+            $insert->bind_param("sssss", $notif_id, $my_id, $row['comment_id'], $row['post_id'], $actor);
+            $insert->execute();
+        }
+        $insert->close();
+    } catch (Exception $e) {}
+}
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
@@ -43,6 +164,25 @@ try {
             message TEXT,
             is_read TINYINT(1) DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+    } catch (Exception $e) {}
+
+
+    // Notifikasi forum disimpan per penerima. Kolom is_read di forum_comments
+    // bersifat global, sehingga satu orang membaca dapat menghapus notifikasi
+    // milik pengguna lain.
+    try {
+        $conn->query("CREATE TABLE IF NOT EXISTS forum_notifications (
+            id VARCHAR(64) PRIMARY KEY,
+            pegawai_id VARCHAR(100) NOT NULL,
+            comment_id VARCHAR(64) NOT NULL,
+            post_id VARCHAR(64) NOT NULL,
+            actor_id VARCHAR(100) NOT NULL,
+            jenis ENUM('mention','post_reply') NOT NULL,
+            is_read TINYINT(1) DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_notif (pegawai_id, comment_id),
+            KEY idx_notif_pegawai (pegawai_id, is_read)
         )");
     } catch (Exception $e) {}
 
@@ -348,50 +488,61 @@ try {
 
             $stmt_nama->close();
             $my_nama = $conn->real_escape_string($my_nama);
+            forumBackfillMentions($conn, $my_id, $my_nama);
 
-            // 1. Ambil Notifikasi Forum
-            $query_forum = "SELECT c.id as comment_id, p.id as post_id, peg.nama as commenter_name, c.tgl_komentar, c.teks 
-                      FROM forum_comments c 
-                      JOIN forum_posts p ON c.post_id = p.id 
-                      JOIN pegawai peg ON (c.pegawai_id = peg.id OR c.pegawai_id = peg.nama) 
-                      WHERE (p.pegawai_id = '$my_id' OR p.pegawai_id = '$my_nama' OR c.teks LIKE '%@$my_nama%') 
-                      AND (c.pegawai_id != '$my_id' AND c.pegawai_id != '$my_nama') 
-                      AND c.is_read = 0";
-            
-            $res_forum = $conn->query($query_forum);
+            // 1. Notifikasi forum per penerima (mention dan balasan).
+            //    Dibaca dari tabel forum_notifications agar status baca tidak
+            //    dibagi bersama pengguna lain seperti kolom forum_comments.is_read.
+            $query_notif = "SELECT fn.comment_id, fn.post_id, fn.jenis, fn.created_at,
+                                   peg.nama as commenter_name, peg.id as commenter_id,
+                                   c.teks, p.teks as post_teks
+                            FROM forum_notifications fn
+                            JOIN forum_comments c ON c.id = fn.comment_id
+                            JOIN forum_posts p ON p.id = fn.post_id
+                            JOIN pegawai peg ON peg.id = fn.actor_id
+                            WHERE fn.pegawai_id = '$my_id' AND fn.is_read = 0";
+
+            $res_forum = $conn->query($query_notif);
             $notifs = [];
             while($row = $res_forum->fetch_assoc()){
-                if (strpos($row['teks'], '@' . $my_nama) !== false) { 
-                    $row['jenis_notif'] = 'mention';
-                } else { 
-                    $row['jenis_notif'] = 'post_reply';
-                }
-                // Alias field dipertahankan agar frontend lama dan baru konsisten.
-                $row['type'] = 'forum';
-                $row['post_title'] = '';
-                $row['created_at'] = $row['tgl_komentar'];
-                $notifs[] = $row;
+                $comment_plain = html_entity_decode((string)$row['teks'], ENT_QUOTES, 'UTF-8');
+                $notifs[] = [
+                    'jenis_notif' => $row['jenis'],
+                    'type' => 'forum',
+                    'comment_id' => $row['comment_id'],
+                    'post_id' => $row['post_id'],
+                    'commenter_name' => $row['commenter_name'],
+                    'avatar_url' => employeeMediaUrlForum($row['commenter_id'], 'avatar'),
+                    'post_title' => mb_substr(trim(strip_tags(html_entity_decode((string)$row['post_teks'], ENT_QUOTES, 'UTF-8'))), 0, 80),
+                    'message_short' => mb_substr($comment_plain, 0, 80),
+                    'tgl_komentar' => $row['created_at'],
+                    'created_at' => $row['created_at'],
+                    'teks' => $row['teks']
+                ];
             }
 
             // 2. Ambil Notifikasi Chat Private
-            $query_chat = "SELECT pc.id as chat_id, pc.sender_id, peg.nama as sender_name, pc.created_at, pc.message 
+            $query_chat = "SELECT pc.id as chat_id, pc.sender_id, peg.nama as sender_name, peg.id as sender_ref, pc.created_at, pc.message
                            FROM private_chats pc
                            JOIN pegawai peg ON pc.sender_id = peg.id
                            WHERE pc.receiver_id = '$my_id' AND pc.is_read = 0";
-            
+
             $res_chat = $conn->query($query_chat);
             while($row_chat = $res_chat->fetch_assoc()){
+                $chat_plain = html_entity_decode((string)$row_chat['message'], ENT_QUOTES, 'UTF-8');
                 $notifs[] = [
                     'jenis_notif' => 'chat',
                     'type' => 'chat',
                     'chat_id' => $row_chat['chat_id'],
                     'sender_id' => $row_chat['sender_id'],
                     'commenter_name' => $row_chat['sender_name'],
+                    'avatar_url' => employeeMediaUrlForum($row_chat['sender_ref'], 'avatar'),
+                    'post_title' => '',
                     'tgl_komentar' => $row_chat['created_at'],
                     'created_at' => $row_chat['created_at'],
                     'teks' => $row_chat['message'],
                     'message' => $row_chat['message'],
-                    'message_short' => mb_substr($row_chat['message'], 0, 80)
+                    'message_short' => mb_substr(trim(strip_tags($chat_plain)), 0, 80)
                 ];
             }
 
@@ -416,41 +567,26 @@ try {
                 exit;
             }
 
-            $stmt_nama = $conn->prepare(
-                "SELECT nama FROM pegawai WHERE id = ? LIMIT 1"
-            );
-
-            $stmt_nama->bind_param("s", $my_id);
-            $stmt_nama->execute();
-            $stmt_nama->bind_result($nama_db);
-
-            if ($stmt_nama->fetch()) {
-                $my_nama = trim((string)$nama_db);
-            }
-
-            $stmt_nama->close();
-
-            $mention = '%@' . $my_nama . '%';
-
+            // Status baca disimpan per penerima. Update global forum_comments.is_read
+            // tidak digunakan lagi agar tidak menghapus notifikasi milik orang lain.
             $stmt = $conn->prepare(
-                "UPDATE forum_comments c
-                JOIN forum_posts p ON c.post_id = p.id
-                SET c.is_read = 1
-                WHERE c.id = ?
-                AND (
-                    p.pegawai_id = ? OR p.pegawai_id = ? OR c.teks LIKE ?
-                )
-                AND c.pegawai_id != ? AND c.pegawai_id != ?"
+                "UPDATE forum_notifications SET is_read = 1 WHERE comment_id = ? AND pegawai_id = ?"
             );
 
-            $stmt->bind_param(
-                "ssssss",
-                $comment_id, $my_id, $my_nama, $mention, $my_id, $my_nama
-            );
+            $stmt->bind_param("ss", $comment_id, $my_id);
 
             $stmt->execute();
             $stmt->close();
 
+            echo json_encode(["status" => "success"]);
+            exit;
+        }
+        elseif ($action == 'mark_all_notif_read') {
+            $my_id = $_SESSION['pegawai_id'];
+            $stmt = $conn->prepare("UPDATE forum_notifications SET is_read = 1 WHERE pegawai_id = ? AND is_read = 0");
+            $stmt->bind_param("s", $my_id);
+            $stmt->execute();
+            $stmt->close();
             echo json_encode(["status" => "success"]);
             exit;
         }
@@ -527,13 +663,28 @@ try {
             $pegawai_id = $_SESSION['pegawai_id'];
             $teks = htmlspecialchars(strip_tags($data['teks'] ?? ''), ENT_QUOTES, 'UTF-8');
             $tgl_komentar = date('Y-m-d H:i:s');
-            
+
             $stmt = $conn->prepare("INSERT INTO forum_comments (id, post_id, pegawai_id, teks, tgl_komentar) VALUES (?, ?, ?, ?, ?)");
             $stmt->bind_param("sssss", $id, $post_id, $pegawai_id, $teks, $tgl_komentar);
-            
+
             if ($stmt->execute()) {
                 $stmt_exp = $conn->prepare("UPDATE pegawai SET exp = exp + 1 WHERE id = ?");
                 $stmt_exp->bind_param("s", $pegawai_id); $stmt_exp->execute();
+                forumQueueNotifications($conn, $id, $post_id, $pegawai_id, $teks);
+
+                try {
+                    $stmt_targets = $conn->prepare("SELECT DISTINCT pegawai_id FROM forum_notifications WHERE comment_id = ?");
+                    $stmt_targets->bind_param("s", $id);
+                    $stmt_targets->execute();
+                    $res_targets = $stmt_targets->get_result();
+                    while ($row_target = $res_targets->fetch_assoc()) {
+                        $target = (string)$row_target['pegawai_id'];
+                        if ($target === '') continue;
+                        kirimPusher('private-chat-user-' . $target, 'mention_baru', ["comment_id" => $id, "post_id" => $post_id, "sender_id" => $pegawai_id]);
+                    }
+                    $stmt_targets->close();
+                } catch (Exception $e) {}
+
                 kirimPusher('private-channel-global', 'refresh_feed', []);
                 echo json_encode(["status" => "success"]);
             }

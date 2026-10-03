@@ -1421,6 +1421,13 @@ window.initPusherClient = async function() {
             cekNotifikasiLonceng();
         });
 
+        privateChannel.bind('mention_baru', function() {
+            playNotifSound();
+            cekNotifikasiLonceng();
+            if (document.getElementById('feedBody') && typeof refreshFeedKeepPosition === 'function') {
+                refreshFeedKeepPosition();
+            }
+        });
         const globalChannel = window.pusherInstance.subscribe('private-channel-global');
         globalChannel.bind('pusher:subscription_error', function() {
             startRealtimeFallbackPolling();

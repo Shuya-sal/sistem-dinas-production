@@ -260,6 +260,35 @@ window.tandaiLoncengSudahDibuka = function() {
     }
 };
 
+window.tandaiSemuaForumSudahDibaca = async function() {
+    const dataNotif = Array.isArray(window.notifikasiLoncengData) ? window.notifikasiLoncengData : [];
+    const forumIds = [];
+    dataNotif.forEach(function(notif) {
+        const jenis = notif ? (notif.jenis_notif || notif.type || '') : '';
+        const commentId = notif ? String(notif.comment_id || '') : '';
+        if ((jenis === 'mention' || jenis === 'post_reply' || jenis === 'forum') && commentId !== '') forumIds.push(commentId);
+    });
+    for (const commentId of Array.from(new Set(forumIds))) {
+        try {
+            await fetch('PHP/api_forum.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'read_notif', comment_id: commentId})
+            });
+        } catch (error) {}
+    }
+    try {
+        await fetch('PHP/api_forum.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'mark_all_notif_read'})
+        });
+    } catch (error) {}
+    window.notifikasiLoncengData = [];
+    window.tandaiLoncengSudahDibuka();
+    if (typeof cekNotifikasiLonceng === 'function') setTimeout(cekNotifikasiLonceng, 400);
+};
+
 window.toggleNotifikasi = function(event) {
     event.stopPropagation();
 
@@ -281,6 +310,9 @@ window.toggleNotifikasi = function(event) {
      */
     if (akanDibuka) {
         window.tandaiLoncengSudahDibuka();
+        if (typeof window.tandaiSemuaForumSudahDibaca === 'function') {
+            window.tandaiSemuaForumSudahDibaca();
+        }
     }
 };
 
