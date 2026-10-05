@@ -1,2 +1,38 @@
-# SIDINA: disable public directory indexes.
+# SIDINA: security hardening.
+# Blok ini ditambahkan manual pada 2026-10-05.
+# Jangan menempatkan directive di antara # BEGIN/# END cPanel-generated
+# karena cPanel akan menulis ulang blok tersebut.
 Options -Indexes
+
+# =====================================================
+# A. PAKSA HTTPS UNTUK SEMUA PERMINTAAN
+# =====================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# =====================================================
+# B. HEADER KEAMANAN (HSTS, X-Frame-Options, dll.)
+# =====================================================
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# =====================================================
+# C. LINDUNGI FILE SENSITIF
+# =====================================================
+<FilesMatch "(^|/)\.(env|env\.example|gitignore|gitattributes)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(sql|bak|backup|log|sh)$">
+    Require all denied
+</FilesMatch>
