@@ -846,18 +846,47 @@ try {
             echo json_encode(["status" => "success"]); exit;
         }
         elseif ($action == 'upload_gambar_base64') {
-            $base64 = $data['image'] ?? '';
-            if(empty($base64)) { echo json_encode(["status" => "error", "message" => "Gambar kosong"]); exit; }
-            $base64 = preg_replace('#^data:image/\w+;base64,#i', '', $base64); $base64 = str_replace(' ', '+', $base64);
-            $img_data = base64_decode($base64);
-            $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($img_data);
-            if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-                $ext = explode('/', $mime)[1];
-                if (!file_exists('../Uploads')) { mkdir('../Users/Image', 0755, true); }
-                $file_name = 'Uploads/img_' . time() . '_' . rand(100,999) . '.' . $ext;
-                file_put_contents('../' . $file_name, $img_data);
-                echo json_encode(["status" => "success", "url" => $file_name]);
-            } else { echo json_encode(["status" => "error", "message" => "Format file tidak diizinkan."]); }
+            $base64 = trim((string)($data['image'] ?? ''));
+            if ($base64 === '') {
+                echo json_encode(["status" => "error", "message" => "Gambar kosong."]); exit;
+            }
+
+            if (!preg_match('#^data:image/(jpeg|png|webp|gif);base64,(.+)$#is', $base64, $matches)) {
+                echo json_encode(["status" => "error", "message" => "Data gambar tidak valid."]); exit;
+            }
+
+            $img_data = base64_decode(str_replace(' ', '+', $matches[2]), true);
+            if ($img_data === false || $img_data === '') {
+                echo json_encode(["status" => "error", "message" => "Data gambar rusak atau tidak dapat dibaca."]); exit;
+            }
+
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->buffer($img_data);
+            $mime_ext = [
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif'
+            ];
+            if (!isset($mime_ext[$mime])) {
+                echo json_encode(["status" => "error", "message" => "Format file tidak diizinkan."]); exit;
+            }
+
+            $upload_dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Uploads';
+            if (!is_dir($upload_dir) && !mkdir($upload_dir, 0755, true)) {
+                echo json_encode(["status" => "error", "message" => "Folder Uploads tidak dapat dibuat."]); exit;
+            }
+            if (!is_dir($upload_dir) || !is_writable($upload_dir)) {
+                echo json_encode(["status" => "error", "message" => "Folder Uploads tidak dapat ditulisi oleh server."]); exit;
+            }
+
+            $file_name = 'Uploads/img_' . bin2hex(random_bytes(12)) . '.' . $mime_ext[$mime];
+            $file_path = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $file_name);
+            if (file_put_contents($file_path, $img_data, LOCK_EX) === false) {
+                echo json_encode(["status" => "error", "message" => "Server gagal menyimpan file gambar."]); exit;
+            }
+
+            echo json_encode(["status" => "success", "url" => $file_name]);
             exit;
         }
     }
