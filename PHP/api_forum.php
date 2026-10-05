@@ -622,7 +622,7 @@ try {
             $media_paths = [];
             $upload_dir = '../Uploads/';
             
-            if (!is_dir($upload_dir)) { mkdir($upload_dir, 0777, true); }
+            if (!is_dir($upload_dir)) { mkdir($upload_dir, 0755, true); }
             
             // Proses file foto lokal langsung ke folder Uploads/
             if (isset($_FILES['media'])) {
@@ -853,7 +853,7 @@ try {
             $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($img_data);
             if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
                 $ext = explode('/', $mime)[1];
-                if (!file_exists('../Uploads')) { mkdir('../Users/Image', 0777, true); }
+                if (!file_exists('../Uploads')) { mkdir('../Users/Image', 0755, true); }
                 $file_name = 'Uploads/img_' . time() . '_' . rand(100,999) . '.' . $ext;
                 file_put_contents('../' . $file_name, $img_data);
                 echo json_encode(["status" => "success", "url" => $file_name]);

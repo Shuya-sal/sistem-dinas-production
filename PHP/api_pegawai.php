@@ -276,7 +276,7 @@ try {
                 
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
                     $ext = explode('/', $mime)[1];
-                    if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0777, true); }
+                    if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
                     $stiker_url = 'Users/Image/stiker_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
                     file_put_contents('../' . $stiker_url, $decoded);
                 } else {
@@ -342,7 +342,7 @@ try {
                 
                 if (in_array($mime, ['image/png', 'image/webp', 'image/gif'])) {
                     $ext = explode('/', $mime)[1];
-                    if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0777, true); }
+                    if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
                     $filename = 'Users/Image/frame_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
                     file_put_contents('../' . $filename, $decoded);
                     $frame = $filename; 
@@ -412,7 +412,7 @@ try {
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
                 
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-                    $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0777, true); }
+                    $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
                     $filename = 'Users/Image/cover_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $cover = $filename; 
                 } else { echo json_encode(["status" => "error", "message" => "Format gambar ditolak karena alasan keamanan."]); exit; }
             }
@@ -442,7 +442,7 @@ try {
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
                 
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-                    $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0777, true); }
+                    $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
                     $filename = 'Users/Image/bg_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $bg = $filename; 
                 } else { echo json_encode(["status" => "error", "message" => "Format gambar ditolak."]); exit; }
             }
@@ -663,7 +663,7 @@ try {
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
                 
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-                    $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0777, true); }
+                    $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
                     $filename = 'Users/Image/pegawai_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $foto = $filename; 
                 } else { echo json_encode(["status" => "error", "message" => "Format gambar ditolak karena alasan keamanan."]); exit; }
             }

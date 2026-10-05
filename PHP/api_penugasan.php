@@ -319,7 +319,7 @@ try {
                     $mime = $finfo->buffer($decoded);
                     if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
                         $ext = explode('/', $mime)[1];
-                        if (!file_exists('../Uploads')) { mkdir('../Uploads', 0777, true); }
+                        if (!file_exists('../Uploads')) { mkdir('../Uploads', 0755, true); }
                         $filename = 'Uploads/doc_' . time() . '_' . rand(10000, 99999) . '.' . $ext;
                         file_put_contents('../' . $filename, $decoded);
                         $paths[] = $filename;
