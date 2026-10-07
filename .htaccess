@@ -27,7 +27,7 @@ Options -Indexes
 </IfModule>
 
 # =====================================================
-# C. LINDUNGI FILE SENSITIF
+# C. LINDUNGI FILE SENSITIF & CEGAH EKSEKUSI DI FOLDER UPLOAD
 # =====================================================
 <FilesMatch "(^|/)\.(env|env\.example|gitignore|gitattributes)$">
     Require all denied
@@ -36,6 +36,16 @@ Options -Indexes
 <FilesMatch "\.(sql|bak|backup|log|sh)$">
     Require all denied
 </FilesMatch>
+
+# Lindungi file include internal agar tidak diakses langsung dari peramban
+<FilesMatch "^(koneksi|pusher_helper)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Blokir eksekusi skrip apapun di dalam folder upload publik
+<IfModule mod_rewrite.c>
+    RewriteRule ^(Uploads|Users/Image)/.*\.(php[0-9]?|phtml|phar|inc|cgi|pl|py|sh)$ - [F,L,NC]
+</IfModule>
 
 # =====================================================
 # D. KOMPRESI GZIP (PERCEPAT LOAD DATA & ASSET)

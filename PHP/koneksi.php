@@ -44,6 +44,23 @@ function catat_log($conn, $pegawai_id, $aksi, $keterangan) {
 }
 
 if (session_status() === PHP_SESSION_NONE) {
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+    if (!headers_sent()) {
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.cookie_samesite', 'Lax');
+        if ($is_https) {
+            ini_set('session.cookie_secure', '1');
+        }
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $is_https,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    }
     session_start();
 }
 

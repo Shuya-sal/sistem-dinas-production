@@ -7,7 +7,6 @@ require 'koneksi.php';
 // ==========================================
 // SATPAM 1: KUNCI PINTU UTAMA API PEGAWAI
 // ==========================================
-session_start();
 if (!isset($_SESSION['pegawai_id'])) {
     http_response_code(401);
     echo json_encode(["status" => "error", "message" => "Akses Ilegal! Server menolak koneksi."]);

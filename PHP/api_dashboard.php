@@ -4,7 +4,6 @@ ini_set('display_errors', 0);
 header("Content-Type: application/json");
 require 'koneksi.php';
 
-session_start();
 if (!isset($_SESSION['pegawai_id'])) {
     http_response_code(401);
     echo json_encode(["status" => "error", "message" => "Akses Ilegal!"]);

@@ -1,5 +1,5 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+require 'koneksi.php';
 header('Content-Type: application/json');
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -8,9 +8,6 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     echo json_encode(["status" => "error", "message" => "Metode tidak diizinkan."]);
     exit;
 }
-
-// 1. Panggil koneksi ke database; POST logout divalidasi CSRF secara global.
-require 'koneksi.php';
 
 // 2. Jika ada sesi pegawai yang sedang aktif, matikan status onlinenya di MySQL
 if (isset($_SESSION['pegawai_id'])) {
