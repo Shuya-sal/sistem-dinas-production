@@ -80,10 +80,11 @@ $q_anggaran->bind_param($types_penugasan, ...$params_penugasan);
 $q_anggaran->execute();
 $total_anggaran = $q_anggaran->get_result()->fetch_assoc()['total_anggaran'] ?? 0;
 
-    $q_pegawai_count = $conn->prepare("SELECT COUNT(id) as total FROM pegawai WHERE " . implode(' AND ', $pegawaiConditions));
-if (!empty($params_pegawai)) { $q_pegawai_count->bind_param($types_pegawai, ...$params_pegawai); }
-$q_pegawai_count->execute();
-$total_pegawai = $q_pegawai_count->get_result()->fetch_assoc()['total'] ?? 0;
+    $where_pegawai_sql = !empty($pegawaiConditions) ? " WHERE " . implode(' AND ', $pegawaiConditions) : "";
+    $q_pegawai_count = $conn->prepare("SELECT COUNT(id) as total FROM pegawai" . $where_pegawai_sql);
+    if (!empty($params_pegawai)) { $q_pegawai_count->bind_param($types_pegawai, ...$params_pegawai); }
+    $q_pegawai_count->execute();
+    $total_pegawai = $q_pegawai_count->get_result()->fetch_assoc()['total'] ?? 0;
 
     $label_chart = [];
     $data_chart = [];

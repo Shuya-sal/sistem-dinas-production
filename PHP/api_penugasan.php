@@ -121,6 +121,10 @@ $whereParams = [];
     }
         }
 
+        if (!empty($whereConditions)) {
+            $whereClause .= " AND " . implode(" AND ", $whereConditions);
+        }
+
         if (isset($_GET['export'])) {
             $export_type = $_GET['export'];
             
