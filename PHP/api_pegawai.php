@@ -591,6 +591,7 @@ $exp_res = $exp_stmt->get_result();
             }
 
             $berhasil = 0;
+            $dilewati = 0;
             $default_password = password_hash('123456', PASSWORD_DEFAULT);
 
             $format_tanggal = function($tgl_str) {
@@ -657,9 +658,12 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
                 $nip = ($nip_val === '-') ? '' : trim($nip_val);
 
                 $cek_stmt->bind_param("ss", $nip, $nama);
-$cek_stmt->execute();
-$cek = $cek_stmt->get_result();
-if ($cek->num_rows > 0) continue;
+                $cek_stmt->execute();
+                $cek = $cek_stmt->get_result();
+                if ($cek->num_rows > 0) {
+                    $dilewati++;
+                    continue;
+                }
 
                 $jabatan = trim($row['jabatan'] ?? ($row['Jabatan'] ?? ''));
                 $pangkat_val = $row['pangkat'] ?? ($row['Pangkat'] ?? '');
@@ -669,7 +673,20 @@ if ($cek->num_rows > 0) continue;
                 $golongan = ($gol_val === '-') ? '' : trim($gol_val);
 
                 $bagian = trim($row['bagian'] ?? ($row['Bagian'] ?? ''));
-                $status = trim($row['status'] ?? ($row['Status'] ?? 'PNS'));
+                $status_raw = trim($row['status'] ?? ($row['Status'] ?? 'PNS'));
+                if (stripos($status_raw, 'DPRD') !== false) {
+                    $status = 'Anggota DPRD';
+                } elseif (stripos($status_raw, 'Paruh Waktu') !== false) {
+                    $status = 'PPPK Paruh Waktu';
+                } elseif (stripos($status_raw, 'PPPK') !== false) {
+                    $status = 'PPPK';
+                } elseif (stripos($status_raw, 'Honorer') !== false || stripos($status_raw, 'Kontrak') !== false) {
+                    $status = 'Honorer';
+                } elseif (stripos($status_raw, 'PNS') !== false || stripos($status_raw, 'ASN') !== false) {
+                    $status = 'PNS';
+                } else {
+                    $status = $status_raw ?: 'PNS';
+                }
 
                 $tingkat_input = trim($row['tingkat'] ?? ($row['Tingkat_Akses'] ?? ($row['tingkat_akses'] ?? 'Staf')));
                 $akses_terlarang = ['God Creator', 'Super Admin', 'Pengguna Anggaran'];
@@ -701,7 +718,7 @@ if ($cek->num_rows > 0) continue;
                 }
             }
 
-            echo json_encode(["status" => "success", "total" => $berhasil]);
+            echo json_encode(["status" => "success", "total" => $berhasil, "dilewati" => $dilewati]);
             exit;
         }
 

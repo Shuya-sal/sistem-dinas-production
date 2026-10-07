@@ -334,8 +334,8 @@ window.prosesUploadBulk = async function(input) {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // Ubah isi Excel menjadi array JSON
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            // Ubah isi Excel menjadi array JSON (pertahankan teks NIP/NIK dan isi kolom kosong dengan string kosong)
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
 
             if (jsonData.length === 0) {
                 alert("File Excel kosong atau format tidak sesuai.");
@@ -354,7 +354,12 @@ window.prosesUploadBulk = async function(input) {
             const result = await response.json();
             
             if (result.status === 'success') {
-                alert(`✅ Berhasil mengimpor ${result.total} data pegawai!\n\n(Catatan: Password bawaan untuk akun-akun baru ini adalah: 123456)`);
+                let pesan = `✅ Berhasil mengimpor ${result.total} data pegawai!`;
+                if (result.dilewati && result.dilewati > 0) {
+                    pesan += `\n(${result.dilewati} data dilewati karena NIP/Nama sudah terdaftar)`;
+                }
+                pesan += `\n\n(Catatan: Password bawaan untuk akun-akun baru ini adalah: 123456)`;
+                alert(pesan);
                 fetchPegawai(1); // Segarkan tabel
             } else {
                 alert("Gagal mengimpor: " + result.message);
