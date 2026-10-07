@@ -15,14 +15,23 @@ $user = "root";
 $pass = ""; 
 $db   = "sistem_dinas";
 
+// Baca kredensial produksi di luar public_html agar tidak tertimpa saat update dari GitHub
+$db_config_file = dirname(dirname(__DIR__)) . '/db-config.php';
+if (is_file($db_config_file) && is_readable($db_config_file)) {
+    $file_db = require $db_config_file;
+    if (is_array($file_db)) {
+        $host = $file_db['host'] ?? $host;
+        $user = $file_db['user'] ?? $user;
+        $pass = $file_db['pass'] ?? $pass;
+        $db   = $file_db['db']   ?? $db;
+    }
+}
+
 $conn = new mysqli($host, $user, $pass, $db);
 
 if ($conn->connect_error) {
     header("Content-Type: application/json");
-    if ($conn->connect_error) {
-    header("Content-Type: application/json");
     die(json_encode(["status" => "error", "message" => "Terjadi gangguan pada server database. Silakan coba beberapa saat lagi."]));
-}
 }
 
 function catat_log($conn, $pegawai_id, $aksi, $keterangan) {
