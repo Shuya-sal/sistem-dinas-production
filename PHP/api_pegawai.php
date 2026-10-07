@@ -56,11 +56,6 @@ function saveEmployeeUpload($file, $prefix, $allowed_mimes) {
 }
 
 try {
-    try { $conn->query("ALTER TABLE pegawai ADD COLUMN cover VARCHAR(255) NULL"); } catch (Exception $e) {}
-    try { $conn->query("ALTER TABLE pegawai ADD COLUMN frame VARCHAR(255) NULL"); } catch (Exception $e) {}
-    try { $conn->query("ALTER TABLE pegawai ADD COLUMN background_page VARCHAR(255) NULL"); } catch (Exception $e) {}
-    try { $conn->query("ALTER TABLE pegawai ADD COLUMN stiker LONGTEXT NULL"); } catch (Exception $e) {}
-
     $method = $_SERVER['REQUEST_METHOD'];
 
     if ($method == 'GET') {
@@ -230,6 +225,19 @@ if (!empty($search)) {
     $whereConditions[] = "status != 'Anggota DPRD'";
 }
 $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+
+        if ($limit_param === 'bagian') {
+            $sql = "SELECT DISTINCT bagian FROM pegawai WHERE bagian IS NOT NULL AND TRIM(bagian) != '' ORDER BY bagian ASC";
+            $res = $conn->query($sql);
+            $data = [];
+            if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                    $data[] = ['bagian' => $row['bagian']];
+                }
+            }
+            echo json_encode(["status" => "success", "data" => $data]);
+            exit;
+        }
 
         if ($limit_param === 'badges' || $limit_param === 'summary') {
             // Daftar UI hanya membutuhkan kolom ringkas. Jangan memakai SELECT *

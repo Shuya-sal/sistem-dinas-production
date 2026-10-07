@@ -7,12 +7,6 @@ session_regenerate_id(true);
 header("Content-Type: application/json");
 require 'koneksi.php';
 
-try {
-    $conn->query("ALTER TABLE pegawai ADD COLUMN login_attempts INT DEFAULT 0");
-    $conn->query("ALTER TABLE pegawai ADD COLUMN lock_until DATETIME NULL");
-    $conn->query("ALTER TABLE pegawai ADD COLUMN penalty_level INT DEFAULT 0");
-} catch (Exception $e) {}
-
 $data = json_decode(file_get_contents("php://input"), true);
 $identitas = trim($data['nip'] ?? ''); 
 $password = $data['password'] ?? '';

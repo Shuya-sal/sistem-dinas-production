@@ -12,9 +12,6 @@ if (!isset($_SESSION['pegawai_id'])) {
     exit;
 }
 
-try { $conn->query("ALTER TABLE penugasan ADD COLUMN dokumentasi LONGTEXT NULL"); } catch (Exception $e) {}
-try { $conn->query("ALTER TABLE penugasan ADD COLUMN dokumentasi2 LONGTEXT NULL"); } catch (Exception $e) {}
-
 try {
     $method = $_SERVER['REQUEST_METHOD'];
     $user_id_login = $_SESSION['pegawai_id'];

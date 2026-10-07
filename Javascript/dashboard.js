@@ -32,7 +32,7 @@ async function setupFilters() {
     document.getElementById('filterBulan').value = String(new Date().getMonth() + 1).padStart(2, '0');
 
     try {
-        const resPegawai = await fetch('PHP/api_pegawai.php?limit=all'); 
+        const resPegawai = await fetch('PHP/api_pegawai.php?limit=bagian');
         const dataPegawai = await resPegawai.json();
         if (dataPegawai.status === 'success') {
             const pegawais = dataPegawai.data || []; 

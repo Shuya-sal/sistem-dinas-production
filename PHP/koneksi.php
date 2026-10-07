@@ -25,20 +25,6 @@ if ($conn->connect_error) {
 }
 }
 
-// ==========================================
-// 1. SISTEM AUDIT TRAIL (LOG AKTIVITAS)
-// ==========================================
-try {
-    $conn->query("CREATE TABLE IF NOT EXISTS sys_logs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        pegawai_id VARCHAR(50) NULL,
-        aksi VARCHAR(100) NOT NULL,
-        keterangan TEXT NOT NULL,
-        ip_address VARCHAR(50) NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )");
-} catch (Exception $e) {}
-
 function catat_log($conn, $pegawai_id, $aksi, $keterangan) {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
     $stmt = $conn->prepare("INSERT INTO sys_logs (pegawai_id, aksi, keterangan, ip_address) VALUES (?, ?, ?, ?)");
@@ -143,13 +129,4 @@ if ($is_state_change && !$is_exempt) {
         catat_log($conn, $actor_id, $log_action, $log_desc);
     }
 }
-// ==========================================
-// 3. OPTIMASI PERFORMA (DATABASE INDEXING)
-// ==========================================
-// Membuat "Daftar Isi" agar pencarian dan pemuatan Dashboard secepat kilat
-try { $conn->query("CREATE INDEX idx_status ON pegawai(status)"); } catch (Exception $e) {}
-try { $conn->query("CREATE INDEX idx_tgl_dibuat ON penugasan(tgl_dibuat)"); } catch (Exception $e) {}
-try { $conn->query("CREATE INDEX idx_jenis_laporan ON penugasan(jenis_laporan)"); } catch (Exception $e) {}
-try { $conn->query("CREATE INDEX idx_tgl_posting ON forum_posts(tgl_posting)"); } catch (Exception $e) {}
-try { $conn->query("CREATE INDEX idx_sender_receiver ON private_chats(sender_id, receiver_id)"); } catch (Exception $e) {}
 ?>

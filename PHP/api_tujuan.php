@@ -13,13 +13,6 @@ if (!isset($_SESSION['pegawai_id'])) {
 
 $user_tingkat = $_SESSION['pegawai_tingkat'] ?? 'Staf';
 
-try { $conn->query("ALTER TABLE tujuan ADD COLUMN uang_harian DOUBLE DEFAULT 0"); } catch (Exception $e) {}
-try { $conn->query("ALTER TABLE tujuan ADD COLUMN pagu_hotel DOUBLE DEFAULT 0"); } catch (Exception $e) {}
-try { $conn->query("ALTER TABLE tujuan ADD COLUMN pagu_hotel_4 DOUBLE DEFAULT 0"); } catch (Exception $e) {}
-try { $conn->query("ALTER TABLE tujuan ADD COLUMN pagu_hotel_es2 DOUBLE DEFAULT 0"); } catch (Exception $e) {}
-try { $conn->query("ALTER TABLE tujuan ADD COLUMN uang_representasi DOUBLE DEFAULT 0"); } catch (Exception $e) {}
-try { $conn->query("ALTER TABLE tujuan ADD COLUMN harga_tiket_pp DECIMAL(15,2) DEFAULT 0"); } catch (Exception $e) {}
-
 $method = $_SERVER['REQUEST_METHOD'];
 
 // ==========================================

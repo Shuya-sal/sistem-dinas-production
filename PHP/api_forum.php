@@ -173,41 +173,6 @@ function forumBackfillMentions($conn, $my_id, $my_nama) {
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
-    try { $conn->query("ALTER TABLE forum_comments ADD COLUMN is_read INT DEFAULT 0"); } catch (Exception $e) {}
-    try { $conn->query("ALTER TABLE forum_comments ADD COLUMN likes TEXT NULL"); } catch (Exception $e) {}
-    try { $conn->query("ALTER TABLE forum_posts ADD COLUMN likes TEXT NULL"); } catch (Exception $e) {}
-    try { $conn->query("ALTER TABLE forum_posts ADD COLUMN is_pinned TINYINT(1) DEFAULT 0"); } catch (Exception $e) {}
-    try { $conn->query("ALTER TABLE pegawai ADD COLUMN is_sangean TINYINT(1) DEFAULT 0"); } catch (Exception $e) {}
-    try {
-        $conn->query("CREATE TABLE IF NOT EXISTS private_chats (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            sender_id VARCHAR(100),
-            receiver_id VARCHAR(100),
-            message TEXT,
-            is_read TINYINT(1) DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )");
-    } catch (Exception $e) {}
-
-
-    // Notifikasi forum disimpan per penerima. Kolom is_read di forum_comments
-    // bersifat global, sehingga satu orang membaca dapat menghapus notifikasi
-    // milik pengguna lain.
-    try {
-        $conn->query("CREATE TABLE IF NOT EXISTS forum_notifications (
-            id VARCHAR(64) PRIMARY KEY,
-            pegawai_id VARCHAR(100) NOT NULL,
-            comment_id VARCHAR(64) NOT NULL,
-            post_id VARCHAR(64) NOT NULL,
-            actor_id VARCHAR(100) NOT NULL,
-            jenis ENUM('mention','post_reply') NOT NULL,
-            is_read TINYINT(1) DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_notif (pegawai_id, comment_id),
-            KEY idx_notif_pegawai (pegawai_id, is_read)
-        )");
-    } catch (Exception $e) {}
-
     $method = $_SERVER['REQUEST_METHOD'];
     $content_type = isset($_SERVER["CONTENT_TYPE"]) ? trim($_SERVER["CONTENT_TYPE"]) : '';
     $is_multipart = (strpos($content_type, 'multipart/form-data') !== false);
