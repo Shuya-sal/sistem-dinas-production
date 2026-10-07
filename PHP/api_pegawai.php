@@ -207,32 +207,41 @@ try {
 
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
         $limit_param = isset($_GET['limit']) ? $_GET['limit'] : '10';
-        
-        // ANTI SQL-INJECTION: Membersihkan karakter jahat pada kolom pencarian
-        $search = isset($_GET['search']) ? $conn->real_escape_string(trim($_GET['search'])) : '';
-        
-        $kategori = isset($_GET['kategori']) ? $conn->real_escape_string(trim($_GET['kategori'])) : ''; 
 
-        $whereClause = "WHERE 1=1";
-        if (!empty($search)) {
-            $whereClause .= " AND (nama LIKE '%$search%' OR nip LIKE '%$search%' OR jabatan LIKE '%$search%' OR nik LIKE '%$search%')";
-        }
-        
+        // ANTI SQL-INJECTION: Membersihkan karakter jahat pada kolom pencarian
+        $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+        $kategori = isset($_GET['kategori']) ? trim($_GET['kategori']) : '';
+
+        $whereConditions = [];
+$whereTypes = '';
+$whereParams = [];
+if (!empty($search)) {
+    $whereConditions[] = "(nama LIKE ? OR nip LIKE ? OR jabatan LIKE ? OR nik LIKE ?)";
+    $whereTypes .= 'ssss';
+    $like_search = '%' . $search . '%';
+    array_push($whereParams, $like_search, $like_search, $like_search, $like_search);
+}
+
         // Memisahkan data berdasarkan Tab yang diklik
         if ($kategori === 'dewan') {
-            $whereClause .= " AND status = 'Anggota DPRD'";
-        } elseif ($kategori === 'staf') {
-            $whereClause .= " AND status != 'Anggota DPRD'";
-        }
+    $whereConditions[] = "status = 'Anggota DPRD'";
+} elseif ($kategori === 'staf') {
+    $whereConditions[] = "status != 'Anggota DPRD'";
+}
+$whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
 
         if ($limit_param === 'badges' || $limit_param === 'summary') {
             // Daftar UI hanya membutuhkan kolom ringkas. Jangan memakai SELECT *
             // karena foto Base64 dan data profil lain dapat membuat respons sangat besar
             // dan terputus pada shared hosting.
             $sql = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
-                           foto, tingkat, is_donatur, is_sangean
-                    FROM pegawai $whereClause ORDER BY nama ASC";
-            $result = $conn->query($sql);
+               foto, tingkat, is_donatur, is_sangean
+        FROM pegawai $whereClause ORDER BY nama ASC";
+$list_stmt = $conn->prepare($sql);
+if (!empty($whereConditions)) { $list_stmt->bind_param($whereTypes, ...$whereParams); }
+$list_stmt->execute();
+$result = $list_stmt->get_result();
             $data = [];
             while ($row = $result->fetch_assoc()) {
                 // Avatar disajikan terpisah agar data Base64 tidak membengkakkan JSON daftar.
@@ -245,10 +254,13 @@ try {
 
         if ($limit_param === 'all') {
             $sql = "SELECT * FROM pegawai $whereClause ORDER BY nama ASC";
-            $result = $conn->query($sql);
+$list_stmt = $conn->prepare($sql);
+if (!empty($whereConditions)) { $list_stmt->bind_param($whereTypes, ...$whereParams); }
+$list_stmt->execute();
+$result = $list_stmt->get_result();
             $data = [];
             while ($row = $result->fetch_assoc()) {
-                unset($row['password']); 
+                unset($row['password']);
                 $row['is_blocked'] = (!empty($row['lock_until']) && strtotime($row['lock_until']) > time());
                 $data[] = $row;
             }
@@ -259,16 +271,24 @@ try {
         $limit = (int)$limit_param;
         $offset = ($page - 1) * $limit;
 
-        $countQuery = $conn->query("SELECT COUNT(id) as total FROM pegawai $whereClause");
-        $total_records = $countQuery->fetch_assoc()['total'];
-        $total_pages = ceil($total_records / $limit);
+        $count_stmt = $conn->prepare("SELECT COUNT(id) as total FROM pegawai $whereClause");
+if (!empty($whereConditions)) { $count_stmt->bind_param($whereTypes, ...$whereParams); }
+$count_stmt->execute();
+$countQuery = $count_stmt->get_result();
+$total_records = $countQuery->fetch_assoc()['total'];
+$total_pages = ceil($total_records / $limit);
 
-        $sql = "SELECT * FROM pegawai $whereClause ORDER BY nama ASC LIMIT $limit OFFSET $offset";
-        $result = $conn->query($sql);
-        
+$sql = "SELECT * FROM pegawai $whereClause ORDER BY nama ASC LIMIT ? OFFSET ?";
+$list_stmt = $conn->prepare($sql);
+$list_types = $whereTypes . 'ii';
+$list_params = array_merge($whereParams, [$limit, $offset]);
+if (!empty($whereConditions)) { $list_stmt->bind_param($list_types, ...$list_params); } else { $list_stmt->bind_param('ii', $limit, $offset); }
+$list_stmt->execute();
+$result = $list_stmt->get_result();
+
         $data = [];
         while ($row = $result->fetch_assoc()) {
-            unset($row['password']); 
+            unset($row['password']);
             $row['is_blocked'] = (!empty($row['lock_until']) && strtotime($row['lock_until']) > time());
             $data[] = $row;
         }
@@ -283,7 +303,7 @@ try {
             ]
         ]);
         exit;
-    } 
+    }
     elseif ($method == 'POST') {
         $is_multipart = isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false;
         $data = $is_multipart ? $_POST : json_decode(file_get_contents("php://input"), true);
@@ -296,7 +316,7 @@ try {
         // =========================================================
 
         if ($action === 'tambah_stiker') {
-            $id = $server_user_id; 
+            $id = $server_user_id;
             $bg = $data['stiker_base64'] ?? '';
             $uploaded_stiker = saveEmployeeUpload($_FILES['file'] ?? $_FILES['stiker'] ?? null, 'stiker', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
@@ -307,9 +327,9 @@ try {
                 $base64_data = substr($bg, strpos($bg, ',') + 1);
                 $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
-                
+
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
-                
+
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
                     $ext = explode('/', $mime)[1];
                     if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
@@ -319,17 +339,20 @@ try {
                     echo json_encode(["status" => "error", "message" => "Format stiker ditolak."]); exit;
                 }
             } elseif (!isset($stiker_url)) { echo json_encode(["status" => "error", "message" => "Data tidak valid."]); exit; }
-            
-            $cek = $conn->query("SELECT stiker FROM pegawai WHERE id = '$id'");
+
+            $cek_stmt = $conn->prepare("SELECT stiker FROM pegawai WHERE id = ?");
+$cek_stmt->bind_param("s", $id);
+$cek_stmt->execute();
+$cek = $cek_stmt->get_result();
             $stiker_arr = [];
             if ($cek->num_rows > 0) {
                 $row = $cek->fetch_assoc();
                 if (!empty($row['stiker'])) { $stiker_arr = json_decode($row['stiker'], true); if (!is_array($stiker_arr)) $stiker_arr = []; }
             }
-            
-            array_unshift($stiker_arr, $stiker_url); 
+
+            array_unshift($stiker_arr, $stiker_url);
             $stiker_json = json_encode($stiker_arr);
-            
+
             $stmt = $conn->prepare("UPDATE pegawai SET stiker=? WHERE id=?");
             $stmt->bind_param("ss", $stiker_json, $id);
             if ($stmt->execute()) echo json_encode(["status" => "success", "stiker" => $stiker_json]);
@@ -338,22 +361,25 @@ try {
         }
 
         if ($action === 'hapus_stiker') {
-            $id = $server_user_id; 
+            $id = $server_user_id;
             $stiker_url = $data['stiker_url'];
-            
-            $cek = $conn->query("SELECT stiker FROM pegawai WHERE id = '$id'");
+
+            $cek_stmt = $conn->prepare("SELECT stiker FROM pegawai WHERE id = ?");
+$cek_stmt->bind_param("s", $id);
+$cek_stmt->execute();
+$cek = $cek_stmt->get_result();
             $stiker_arr = [];
             if ($cek->num_rows > 0) {
                 $row = $cek->fetch_assoc();
                 if (!empty($row['stiker'])) { $stiker_arr = json_decode($row['stiker'], true); if (!is_array($stiker_arr)) $stiker_arr = []; }
             }
-            
+
             if (file_exists('../' . $stiker_url)) { unlink('../' . $stiker_url); }
-            
+
             $stiker_arr = array_filter($stiker_arr, function($v) use ($stiker_url) { return $v !== $stiker_url; });
-            $stiker_arr = array_values($stiker_arr); 
+            $stiker_arr = array_values($stiker_arr);
             $stiker_json = json_encode($stiker_arr);
-            
+
             $stmt = $conn->prepare("UPDATE pegawai SET stiker=? WHERE id=?");
             $stmt->bind_param("ss", $stiker_json, $id);
             if ($stmt->execute()) echo json_encode(["status" => "success", "stiker" => $stiker_json]);
@@ -367,7 +393,10 @@ try {
             $uploaded_frame = saveEmployeeUpload($_FILES['frame'] ?? $_FILES['file'] ?? null, 'frame', ['image/png', 'image/webp', 'image/gif']);
             if ($uploaded_frame !== null) { $frame = $uploaded_frame; }
 
-            $cek_old = $conn->query("SELECT frame FROM pegawai WHERE id = '$id'");
+            $cek_old_stmt = $conn->prepare("SELECT frame FROM pegawai WHERE id = ?");
+$cek_old_stmt->bind_param("s", $id);
+$cek_old_stmt->execute();
+$cek_old = $cek_old_stmt->get_result();
             $old_frame = '';
             if ($cek_old->num_rows > 0) { $old_frame = $cek_old->fetch_assoc()['frame']; }
 
@@ -375,15 +404,15 @@ try {
                 $base64_data = substr($frame, strpos($frame, ',') + 1);
                 $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
-                
+
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
-                
+
                 if (in_array($mime, ['image/png', 'image/webp', 'image/gif'])) {
                     $ext = explode('/', $mime)[1];
                     if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
                     $filename = 'Users/Image/frame_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
                     file_put_contents('../' . $filename, $decoded);
-                    $frame = $filename; 
+                    $frame = $filename;
                 } else {
                     echo json_encode(["status" => "error", "message" => "Bingkai wajib berformat transparan (PNG/WEBP)."]); exit;
                 }
@@ -399,19 +428,22 @@ try {
             else echo json_encode(["status" => "error", "message" => $stmt->error]);
             exit;
         }
-        
+
         if ($action === 'ganti_password') {
             $id = $server_user_id;
             $password_lama = $data['password_lama'] ?? '';
             $password_baru = $data['password_baru'] ?? '';
 
             if (empty($password_lama) || empty($password_baru) || strlen($password_baru) < 5) {
-                echo json_encode(["status" => "error", "message" => "Semua kolom wajib diisi & password baru minimal 5 karakter."]); 
+                echo json_encode(["status" => "error", "message" => "Semua kolom wajib diisi & password baru minimal 5 karakter."]);
                 exit;
             }
 
             // 1. Cek kecocokan password lama di database
-            $cek = $conn->query("SELECT password FROM pegawai WHERE id = '$id'");
+            $cek_stmt = $conn->prepare("SELECT password FROM pegawai WHERE id = ?");
+$cek_stmt->bind_param("s", $id);
+$cek_stmt->execute();
+$cek = $cek_stmt->get_result();
             if ($cek->num_rows > 0) {
                 $row = $cek->fetch_assoc();
                 if (!password_verify($password_lama, $row['password'])) {
@@ -427,7 +459,7 @@ try {
             $password_final = password_hash($password_baru, PASSWORD_DEFAULT);
             $stmt = $conn->prepare("UPDATE pegawai SET password=? WHERE id=?");
             $stmt->bind_param("ss", $password_final, $id);
-            
+
             if ($stmt->execute()) {
                 echo json_encode(["status" => "success"]);
             } else {
@@ -442,7 +474,10 @@ try {
             $uploaded_cover = saveEmployeeUpload($_FILES['cover'] ?? $_FILES['file'] ?? null, 'cover', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
             if ($uploaded_cover !== null) { $cover = $uploaded_cover; }
 
-            $cek_old = $conn->query("SELECT cover FROM pegawai WHERE id = '$id'");
+            $cek_old_stmt = $conn->prepare("SELECT cover FROM pegawai WHERE id = ?");
+$cek_old_stmt->bind_param("s", $id);
+$cek_old_stmt->execute();
+$cek_old = $cek_old_stmt->get_result();
             $old_cover = '';
             if ($cek_old->num_rows > 0) { $old_cover = $cek_old->fetch_assoc()['cover']; }
 
@@ -450,10 +485,10 @@ try {
                 $base64_data = substr($cover, strpos($cover, ',') + 1); $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
-                
+
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
                     $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
-                    $filename = 'Users/Image/cover_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $cover = $filename; 
+                    $filename = 'Users/Image/cover_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $cover = $filename;
                 } else { echo json_encode(["status" => "error", "message" => "Format gambar ditolak karena alasan keamanan."]); exit; }
             }
 
@@ -474,7 +509,10 @@ try {
             $uploaded_background = saveEmployeeUpload($_FILES['background_page'] ?? $_FILES['file'] ?? null, 'bg', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
             if ($uploaded_background !== null) { $bg = $uploaded_background; }
 
-            $cek_old = $conn->query("SELECT background_page FROM pegawai WHERE id = '$id'");
+            $cek_old_stmt = $conn->prepare("SELECT background_page FROM pegawai WHERE id = ?");
+$cek_old_stmt->bind_param("s", $id);
+$cek_old_stmt->execute();
+$cek_old = $cek_old_stmt->get_result();
             $old_bg = '';
             if ($cek_old->num_rows > 0) { $old_bg = $cek_old->fetch_assoc()['background_page']; }
 
@@ -482,10 +520,10 @@ try {
                 $base64_data = substr($bg, strpos($bg, ',') + 1); $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
-                
+
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
                     $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
-                    $filename = 'Users/Image/bg_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $bg = $filename; 
+                    $filename = 'Users/Image/bg_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $bg = $filename;
                 } else { echo json_encode(["status" => "error", "message" => "Format gambar ditolak."]); exit; }
             }
 
@@ -504,8 +542,8 @@ try {
             if ($server_user_tingkat !== 'God Creator') {
                 echo json_encode(["status" => "error", "message" => "Hanya God Creator yang dapat membuka blokir!"]); exit;
             }
-            $id = $conn->real_escape_string($data['id']);
-            $stmt = $conn->prepare("UPDATE pegawai SET login_attempts = 0, penalty_level = 0, lock_until = NULL WHERE id = ?");
+            $id = $data['id'];
+$stmt = $conn->prepare("UPDATE pegawai SET login_attempts = 0, penalty_level = 0, lock_until = NULL WHERE id = ?");
             $stmt->bind_param("s", $id);
             if ($stmt->execute()) echo json_encode(["status" => "success"]);
             else echo json_encode(["status" => "error"]);
@@ -513,17 +551,20 @@ try {
         }
 
         if ($action === 'ping_online') {
-            $id = $server_user_id; 
+            $id = $server_user_id;
             $stmt = $conn->prepare("UPDATE pegawai SET akhir_aktif = NOW() WHERE id = ?");
             $stmt->bind_param("s", $id);
             $stmt->execute();
-            
+
             $res = $conn->query("SELECT COUNT(*) as aktif FROM pegawai WHERE akhir_aktif >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)");
             $row = $res->fetch_assoc();
-            
-            $exp_res = $conn->query("SELECT exp FROM pegawai WHERE id = '$id'");
+
+            $exp_stmt = $conn->prepare("SELECT exp FROM pegawai WHERE id = ?");
+$exp_stmt->bind_param("s", $id);
+$exp_stmt->execute();
+$exp_res = $exp_stmt->get_result();
             $exp_val = 0; if ($exp_res->num_rows > 0) { $exp_val = $exp_res->fetch_assoc()['exp']; }
-            
+
             echo json_encode(["status" => "success", "online_count" => $row['aktif'], "exp" => (int)$exp_val]);
             exit;
         }
@@ -542,7 +583,7 @@ try {
             }
 
             $berhasil = 0;
-            $default_password = password_hash('123456', PASSWORD_DEFAULT); 
+            $default_password = password_hash('123456', PASSWORD_DEFAULT);
 
             $format_tanggal = function($tgl_str) {
                 if (is_numeric($tgl_str) && $tgl_str > 10000) {
@@ -552,7 +593,7 @@ try {
 
                 $tgl_str = trim((string)$tgl_str);
                 if (empty($tgl_str) || $tgl_str === '-' || $tgl_str === '0000-00-00') {
-                    return null; 
+                    return null;
                 }
 
                 if (strpos($tgl_str, '/') !== false) {
@@ -561,7 +602,7 @@ try {
                         $day = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
                         $month = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
                         $year = $parts[2];
-                        
+
                         if (strlen($year) === 2) {
                             $year = ($year > 50 ? '19' : '20') . $year;
                         }
@@ -591,59 +632,62 @@ try {
                     return date('Y-m-d', $timestamp);
                 }
 
-                return null; 
+                return null;
             };
 
             $stmt = $conn->prepare("INSERT INTO pegawai (id, nama, nip, jabatan, pangkat, golongan, bagian, status, password, tingkat, nik, tempat_lahir, tgl_lahir, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '') OR nama = ?");
 
             foreach ($pegawai_list as $row) {
                 $nama_val = $row['nama'] ?? ($row['Nama_Lengkap'] ?? ($row['nama_lengkap'] ?? ''));
-                if (empty(trim($nama_val))) continue; 
+                if (empty(trim($nama_val))) continue;
 
                 $id = uniqid('peg_', true) . rand(1000, 9999);
-                $nama = $conn->real_escape_string(trim($nama_val));
-                
-                $nip_val = $row['nip'] ?? ($row['NIP'] ?? '');
-                $nip = ($nip_val === '-') ? '' : $conn->real_escape_string(trim($nip_val));
-                
-                $cek = $conn->query("SELECT id FROM pegawai WHERE (nip = '$nip' AND nip != '') OR nama = '$nama'");
-                if ($cek->num_rows > 0) continue; 
+                $nama = trim($nama_val);
 
-                $jabatan = $conn->real_escape_string(trim($row['jabatan'] ?? ($row['Jabatan'] ?? '')));
+                $nip_val = $row['nip'] ?? ($row['NIP'] ?? '');
+                $nip = ($nip_val === '-') ? '' : trim($nip_val);
+
+                $cek_stmt->bind_param("ss", $nip, $nama);
+$cek_stmt->execute();
+$cek = $cek_stmt->get_result();
+if ($cek->num_rows > 0) continue;
+
+                $jabatan = trim($row['jabatan'] ?? ($row['Jabatan'] ?? ''));
                 $pangkat_val = $row['pangkat'] ?? ($row['Pangkat'] ?? '');
-                $pangkat = ($pangkat_val === '-') ? '' : $conn->real_escape_string(trim($pangkat_val));
+                $pangkat = ($pangkat_val === '-') ? '' : trim($pangkat_val);
 
                 $gol_val = $row['golongan'] ?? ($row['Golongan'] ?? '');
-                $golongan = ($gol_val === '-') ? '' : $conn->real_escape_string(trim($gol_val));
+                $golongan = ($gol_val === '-') ? '' : trim($gol_val);
 
-                $bagian = $conn->real_escape_string(trim($row['bagian'] ?? ($row['Bagian'] ?? '')));
-                $status = $conn->real_escape_string(trim($row['status'] ?? ($row['Status'] ?? 'PNS')));
-                
+                $bagian = trim($row['bagian'] ?? ($row['Bagian'] ?? ''));
+                $status = trim($row['status'] ?? ($row['Status'] ?? 'PNS'));
+
                 $tingkat_input = trim($row['tingkat'] ?? ($row['Tingkat_Akses'] ?? ($row['tingkat_akses'] ?? 'Staf')));
                 $akses_terlarang = ['God Creator', 'Super Admin', 'Pengguna Anggaran'];
-                
+
                 if (in_array($tingkat_input, $akses_terlarang)) {
-                    $tingkat = 'Staf'; 
+                    $tingkat = 'Staf';
                 } else {
-                    $tingkat = empty($tingkat_input) ? 'Staf' : $conn->real_escape_string($tingkat_input);
+                    $tingkat = empty($tingkat_input) ? 'Staf' : $tingkat_input;
                 }
 
                 $nik_val = $row['nik'] ?? ($row['NIK'] ?? '');
-                $nik = ($nik_val === '-') ? '' : $conn->real_escape_string(trim($nik_val));
+                $nik = ($nik_val === '-') ? '' : trim($nik_val);
 
                 $tempat_val = $row['tempat_lahir'] ?? ($row['Tempat_Lahir'] ?? '');
-                $tempat_lahir = ($tempat_val === '-') ? '' : $conn->real_escape_string(trim($tempat_val));
-                
+                $tempat_lahir = ($tempat_val === '-') ? '' : trim($tempat_val);
+
                 $tgl_lahir_raw = $row['tgl_lahir'] ?? ($row['Tanggal_Lahir'] ?? ($row['tanggal_lahir'] ?? ''));
-                $tgl_lahir = $format_tanggal($tgl_lahir_raw); 
+                $tgl_lahir = $format_tanggal($tgl_lahir_raw);
 
                 $alamat_val = $row['alamat'] ?? ($row['Alamat'] ?? '');
-                $alamat = ($alamat_val === '-') ? '' : $conn->real_escape_string(trim($alamat_val));
+                $alamat = ($alamat_val === '-') ? '' : trim($alamat_val);
 
                 $tgl_lahir_bind = ($tgl_lahir === null) ? null : $tgl_lahir;
-                
+
                 $stmt->bind_param("ssssssssssssss", $id, $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $default_password, $tingkat, $nik, $tempat_lahir, $tgl_lahir_bind, $alamat);
-                
+
                 if ($stmt->execute()) {
                     $berhasil++;
                 }
@@ -675,15 +719,15 @@ try {
             }
 
             if ($is_self_update) {
-                $id = $server_user_id; 
+                $id = $server_user_id;
             } else {
                 if ($server_user_tingkat === 'Staf') {
                     echo json_encode(["status" => "error", "message" => "Akses Ditolak! Anda tidak berhak mengedit data pegawai lain."]); exit;
                 }
-                $id = $conn->real_escape_string($data['id']); 
-            }
+                $id = $data['id'];
+}
 
-            // Upload profil dapat mengirim file saja; pertahankan field lama yang tidak dikirim.
+// Upload profil dapat mengirim file saja; pertahankan field lama yang tidak dikirim.
             $current = [];
             $current_stmt = $conn->prepare("SELECT nama, nip, jabatan, pangkat, golongan, bagian, status, password, tingkat, foto, nik, tempat_lahir, tgl_lahir, alamat FROM pegawai WHERE id = ? LIMIT 1");
             $current_stmt->bind_param("s", $id);
@@ -704,7 +748,7 @@ try {
             $foto = array_key_exists('foto', $data) ? $data['foto'] : ($current['foto'] ?? '');
             $uploaded_foto = saveEmployeeUpload($_FILES['foto'] ?? $_FILES['file'] ?? null, 'pegawai', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
             if ($uploaded_foto !== null) { $foto = $uploaded_foto; }
-            
+
             $nik = $data['nik'] ?? ($current['nik'] ?? '');
             $tempat_lahir = $data['tempat_lahir'] ?? ($current['tempat_lahir'] ?? '');
             $tgl_lahir = $data['tgl_lahir'] ?? ($current['tgl_lahir'] ?? '');
@@ -714,14 +758,17 @@ try {
                 $base64_data = substr($foto, strpos($foto, ',') + 1); $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
-                
+
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
                     $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
-                    $filename = 'Users/Image/pegawai_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $foto = $filename; 
+                    $filename = 'Users/Image/pegawai_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $foto = $filename;
                 } else { echo json_encode(["status" => "error", "message" => "Format gambar ditolak karena alasan keamanan."]); exit; }
             }
 
-            $cek = $conn->query("SELECT id, foto FROM pegawai WHERE id = '$id'");
+            $cek_stmt = $conn->prepare("SELECT id, foto FROM pegawai WHERE id = ?");
+$cek_stmt->bind_param("s", $id);
+$cek_stmt->execute();
+$cek = $cek_stmt->get_result();
             if ($cek->num_rows > 0) {
                 $row_old = $cek->fetch_assoc();
                 $old_foto = $row_old['foto'];
@@ -754,7 +801,7 @@ try {
                 $stmt = $conn->prepare("INSERT INTO pegawai (id, nama, nip, jabatan, pangkat, golongan, bagian, status, password, tingkat, foto, nik, tempat_lahir, tgl_lahir, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->bind_param("sssssssssssssss", $id, $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $password_final, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat);
             }
-            
+
             if ($stmt->execute()) echo json_encode(["status" => "success", "foto" => $foto]);
             else echo json_encode(["status" => "error", "message" => $stmt->error]);
             exit;
@@ -771,23 +818,24 @@ try {
             exit;
         }
 
-        $id = $conn->real_escape_string($data['id']);
-        $status = (int)$data['status'];
+        $id = $data['id'];
+$status = (int)$data['status'];
 
-        if (!in_array($status, [0, 1], true)) {
-            echo json_encode([
-                "status" => "error",
-                "message" => "Status lencana tidak valid."
-            ]);
-            exit;
-        }
-            
-            $query = "UPDATE pegawai SET is_donatur = $status WHERE id = '$id'";
-            if ($conn->query($query)) {
-                echo json_encode(["status" => "success"]);
-            } else {
-                echo json_encode(["status" => "error", "message" => "Gagal mengubah status: " . $conn->error]);
-            }
+if (!in_array($status, [0, 1], true)) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Status lencana tidak valid."
+    ]);
+    exit;
+}
+
+$stmt = $conn->prepare("UPDATE pegawai SET is_donatur = ? WHERE id = ?");
+$stmt->bind_param("is", $status, $id);
+if ($stmt->execute()) {
+    echo json_encode(["status" => "success"]);
+} else {
+    echo json_encode(["status" => "error", "message" => "Gagal mengubah status: " . $stmt->error]);
+}
             exit;
         }
         if ($action == 'toggle_sangean') {
@@ -799,36 +847,40 @@ try {
             exit;
         }
 
-        $id = $conn->real_escape_string($data['id']);
-        $status = (int)$data['status'];
+        $id = $data['id'];
+$status = (int)$data['status'];
 
-        if (!in_array($status, [0, 1], true)) {
-            echo json_encode([
-                "status" => "error",
-                "message" => "Status lencana tidak valid."
-            ]);
+if (!in_array($status, [0, 1], true)) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Status lencana tidak valid."
+    ]);
+    exit;
+}
+
+$stmt = $conn->prepare("UPDATE pegawai SET is_sangean = ? WHERE id = ?");
+$stmt->bind_param("is", $status, $id);
+if ($stmt->execute()) {
+    echo json_encode(["status" => "success"]);
+} else {
+    echo json_encode(["status" => "error", "message" => "Gagal mengubah status: " . $stmt->error]);
+}
             exit;
         }
-            
-            $query = "UPDATE pegawai SET is_sangean = $status WHERE id = '$id'";
-            if ($conn->query($query)) {
-                echo json_encode(["status" => "success"]);
-            } else {
-                echo json_encode(["status" => "error", "message" => "Gagal mengubah status: " . $conn->error]);
-            }
-            exit;
-        }
-        
-    } 
+
+    }
     elseif ($method == 'DELETE') {
         if ($server_user_tingkat === 'Staf' || $server_user_tingkat === 'Human') {
             echo json_encode(["status" => "error", "message" => "Anda tidak memiliki wewenang untuk menghapus data pegawai!"]); exit;
         }
 
         $data = json_decode(file_get_contents("php://input"), true);
-        $id = $conn->real_escape_string($data['id']); 
+$id = $data['id'];
 
-        $cek = $conn->query("SELECT foto, cover, frame, background_page, stiker FROM pegawai WHERE id = '$id'");
+$cek_stmt = $conn->prepare("SELECT foto, cover, frame, background_page, stiker FROM pegawai WHERE id = ?");
+$cek_stmt->bind_param("s", $id);
+$cek_stmt->execute();
+$cek = $cek_stmt->get_result();
         if ($cek->num_rows > 0) {
             $row_del = $cek->fetch_assoc();
             foreach(['foto', 'cover', 'frame', 'background_page'] as $col) {
@@ -836,23 +888,38 @@ try {
                     $path = '../' . $row_del[$col]; if (file_exists($path)) unlink($path);
                 }
             }
-            
+
             if (!empty($row_del['stiker'])) {
                 $stikers = json_decode($row_del['stiker'], true);
                 if(is_array($stikers)){
-                    foreach($stikers as $stiker_path){ 
+                    foreach($stikers as $stiker_path){
                         if (strpos($stiker_path, 'Users/Image/') === 0 || strpos($stiker_path, 'Uploads/') === 0) {
-                            if (file_exists('../' . $stiker_path)) unlink('../' . $stiker_path); 
+                            if (file_exists('../' . $stiker_path)) unlink('../' . $stiker_path);
                         }
                     }
                 }
             }
         }
-        
-        $conn->query("DELETE FROM penugasan WHERE pegawai_id = '$id' OR input_by = '$id'");
-        $conn->query("DELETE FROM forum_posts WHERE pegawai_id = '$id'");
-        $conn->query("DELETE FROM forum_comments WHERE pegawai_id = '$id'");
-        $conn->query("DELETE FROM private_chats WHERE sender_id = '$id' OR receiver_id = '$id'");
+
+        $del_stmt = $conn->prepare("DELETE FROM penugasan WHERE pegawai_id = ? OR input_by = ?");
+$del_stmt->bind_param("ss", $id, $id);
+$del_stmt->execute();
+$del_stmt->close();
+
+$del_stmt = $conn->prepare("DELETE FROM forum_posts WHERE pegawai_id = ?");
+$del_stmt->bind_param("s", $id);
+$del_stmt->execute();
+$del_stmt->close();
+
+$del_stmt = $conn->prepare("DELETE FROM forum_comments WHERE pegawai_id = ?");
+$del_stmt->bind_param("s", $id);
+$del_stmt->execute();
+$del_stmt->close();
+
+$del_stmt = $conn->prepare("DELETE FROM private_chats WHERE sender_id = ? OR receiver_id = ?");
+$del_stmt->bind_param("ss", $id, $id);
+$del_stmt->execute();
+$del_stmt->close();
 
         $stmt = $conn->prepare("DELETE FROM pegawai WHERE id = ?");
         $stmt->bind_param("s", $id);

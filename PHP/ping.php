@@ -8,7 +8,9 @@ require 'koneksi.php';
 // 1. DETAK JANTUNG: Perbarui waktu terakhir aktif milik pegawai ini menjadi DETIK INI JUGA
 if (isset($_SESSION['pegawai_id'])) {
     $id = $_SESSION['pegawai_id'];
-    $conn->query("UPDATE pegawai SET akhir_aktif = NOW() WHERE id = '$id'");
+    $stmt = $conn->prepare("UPDATE pegawai SET akhir_aktif = NOW() WHERE id = ?");
+    $stmt->bind_param("s", $id);
+    $stmt->execute();
 }
 
 // 2. SINKRONISASI: Hitung total semua pegawai yang masih berdetak dalam 5 menit terakhir

@@ -42,70 +42,65 @@ try {
         // [BLOCK GET SAMA SEPERTI SEBELUMNYA, DILONCATI UNTUK MENGHEMAT TEMPAT KARENA TIDAK ADA BUG DISINI]
         $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
         $limit_param = isset($_GET['limit']) ? $_GET['limit'] : '5';
-        $search = isset($_GET['search']) ? $conn->real_escape_string(trim($_GET['search'])) : '';
-        $start_date = isset($_GET['start_date']) ? $conn->real_escape_string(trim($_GET['start_date'])) : '';
-        $end_date = isset($_GET['end_date']) ? $conn->real_escape_string(trim($_GET['end_date'])) : '';
-        $bulan = isset($_GET['bulan']) ? $conn->real_escape_string(trim($_GET['bulan'])) : '';
-        $tahun = isset($_GET['tahun']) ? $conn->real_escape_string(trim($_GET['tahun'])) : '';
-        $bagian = isset($_GET['bagian']) ? $conn->real_escape_string(trim($_GET['bagian'])) : '';
+        $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $start_date = isset($_GET['start_date']) ? trim($_GET['start_date']) : '';
+        $end_date = isset($_GET['end_date']) ? trim($_GET['end_date']) : '';
+        $bulan = isset($_GET['bulan']) ? trim($_GET['bulan']) : '';
+        $tahun = isset($_GET['tahun']) ? trim($_GET['tahun']) : '';
+        $bagian = isset($_GET['bagian']) ? trim($_GET['bagian']) : '';
         $whereClause = "WHERE 1=1";
+$whereConditions = [];
+$whereTypes = '';
+$whereParams = [];
 
         // God Creator dapat melihat seluruh laporan.
         // Tingkat akses lain hanya dapat melihat laporan yang dibuat
         // oleh pengguna dari Bagian/Subbagian yang sama.
         if ($user_tingkat !== 'God Creator') {
-            $user_id_aman = $conn->real_escape_string(
-                $user_id_login
-            );
-
-            $user_bagian_aman = $conn->real_escape_string(
-                $user_bagian
-            );
-
-            if ($user_bagian_aman !== '') {
-                $whereClause .= "
-                    AND pembuat.bagian = '$user_bagian_aman'
-                ";
-            } else {
-                // Apabila akun belum mempunyai Bagian/Subbagian,
-                // pengguna hanya dapat melihat laporannya sendiri.
-                $whereClause .= "
-                    AND (
-                        d.input_by = '$user_id_aman'
-                        OR (
-                            (d.input_by IS NULL OR d.input_by = '')
-                            AND d.pegawai_id = '$user_id_aman'
-                        )
-                    )
-                ";
-            }
-        }
+    if ($user_bagian !== '') {
+        $whereConditions[] = "pembuat.bagian = ?";
+        $whereTypes .= 's';
+        $whereParams[] = $user_bagian;
+    } else {
+        // Apabila akun belum mempunyai Bagian/Subbagian,
+        // pengguna hanya dapat melihat laporannya sendiri.
+        $whereConditions[] = "(
+            d.input_by = ?
+            OR (
+                (d.input_by IS NULL OR d.input_by = '')
+                AND d.pegawai_id = ?
+            )
+        )";
+        $whereTypes .= 'ss';
+        array_push($whereParams, $user_id_login, $user_id_login);
+    }
+}
 
         if (!empty($search)) {
-            $whereClause .= "
-                AND (
-                    p.nama LIKE '%$search%'
-                    OR p.nip LIKE '%$search%'
-                    OR d.lokasi_tujuan LIKE '%$search%'
-                    OR d.nodin LIKE '%$search%'
-                )
-            ";
-        }
+    $whereConditions[] = "(
+        p.nama LIKE ?
+        OR p.nip LIKE ?
+        OR d.lokasi_tujuan LIKE ?
+        OR d.nodin LIKE ?
+    )";
+    $like_search = '%' . $search . '%';
+    $whereTypes .= 'ssss';
+    array_push($whereParams, $like_search, $like_search, $like_search, $like_search);
+}
 
         if (!empty($start_date) && !empty($end_date)) {
-            $whereClause .= "
-                AND d.tgl_dibuat >= '$start_date'
-                AND d.tgl_dibuat <= '$end_date'
-            ";
-        } elseif (!empty($start_date)) {
-            $whereClause .= "
-                AND d.tgl_dibuat >= '$start_date'
-            ";
-        } elseif (!empty($end_date)) {
-            $whereClause .= "
-                AND d.tgl_dibuat <= '$end_date'
-            ";
-        }
+    $whereConditions[] = "d.tgl_dibuat >= ? AND d.tgl_dibuat <= ?";
+    $whereTypes .= 'ss';
+    array_push($whereParams, $start_date, $end_date);
+} elseif (!empty($start_date)) {
+    $whereConditions[] = "d.tgl_dibuat >= ?";
+    $whereTypes .= 's';
+    $whereParams[] = $start_date;
+} elseif (!empty($end_date)) {
+    $whereConditions[] = "d.tgl_dibuat <= ?";
+    $whereTypes .= 's';
+    $whereParams[] = $end_date;
+}
 
         if (!empty($tahun)) {
             if (!empty($bulan)) {
@@ -116,16 +111,14 @@ try {
                     strtotime($start_date_dash)
                 );
 
-                $whereClause .= "
-                    AND d.tgl_dibuat >= '$start_date_dash'
-                    AND d.tgl_dibuat <= '$end_date_dash'
-                ";
-            } else {
-                $whereClause .= "
-                    AND d.tgl_dibuat >= '$tahun-01-01'
-                    AND d.tgl_dibuat <= '$tahun-12-31'
-                ";
-            }
+                        $whereConditions[] = "d.tgl_dibuat >= ? AND d.tgl_dibuat <= ?";
+        $whereTypes .= 'ss';
+        array_push($whereParams, $start_date_dash, $end_date_dash);
+    } else {
+        $whereConditions[] = "d.tgl_dibuat >= ? AND d.tgl_dibuat <= ?";
+        $whereTypes .= 'ss';
+        array_push($whereParams, $tahun . '-01-01', $tahun . '-12-31');
+    }
         }
 
         if (isset($_GET['export'])) {
@@ -173,8 +166,10 @@ try {
             ON d.lokasi_tujuan = tj.nama 
             AND d.jenis_tujuan = tj.jenis 
             $whereClause ORDER BY d.id DESC";
-            
-            $result = $conn->query($sql);
+$export_stmt = $conn->prepare($sql);
+if (!empty($whereConditions)) { $export_stmt->bind_param($whereTypes, ...$whereParams); }
+$export_stmt->execute();
+$result = $export_stmt->get_result();
             $no = 1; $t_harian = 0; $t_brgkt = 0; $t_plg = 0; $t_hotel = 0; $t_rep = 0; $t_all = 0;
             while ($row = $result->fetch_assoc()) {
                 if ($export_type === 'keuangan') {
@@ -204,24 +199,30 @@ try {
                 d.pegawai_id
             )
         $whereClause
-        ORDER BY d.id DESC";
-            $result = $conn->query($sql); $data = []; while ($row = $result->fetch_assoc()) { $data[] = $row; }
+ORDER BY d.id DESC";
+$all_stmt = $conn->prepare($sql);
+if (!empty($whereConditions)) { $all_stmt->bind_param($whereTypes, ...$whereParams); }
+$all_stmt->execute();
+$result = $all_stmt->get_result(); $data = []; while ($row = $result->fetch_assoc()) { $data[] = $row; }
             echo json_encode(["status" => "success", "data" => $data]); exit;
         }
 
         $limit = (int)$limit_param; $offset = ($page - 1) * $limit;
-        $countQuery = $conn->query(
-            "SELECT COUNT(d.id) as total
-            FROM penugasan d
-            LEFT JOIN pegawai p
-                ON d.pegawai_id = p.id
-            LEFT JOIN pegawai pembuat
-                ON pembuat.id = COALESCE(
-                    NULLIF(d.input_by, ''),
-                    d.pegawai_id
-                )
-            $whereClause"
-        );
+        $count_stmt = $conn->prepare(
+    "SELECT COUNT(d.id) as total
+    FROM penugasan d
+    LEFT JOIN pegawai p
+        ON d.pegawai_id = p.id
+    LEFT JOIN pegawai pembuat
+        ON pembuat.id = COALESCE(
+            NULLIF(d.input_by, ''),
+            d.pegawai_id
+        )
+    $whereClause"
+);
+if (!empty($whereConditions)) { $count_stmt->bind_param($whereTypes, ...$whereParams); }
+$count_stmt->execute();
+$countQuery = $count_stmt->get_result();
         $total_records = $countQuery->fetch_assoc()['total']; $total_pages = ceil($total_records / $limit);
         $sql = "SELECT d.*
         FROM penugasan d
@@ -233,10 +234,15 @@ try {
                 d.pegawai_id
             )
         $whereClause
-        ORDER BY d.id DESC
-        LIMIT $limit OFFSET $offset";
-        
-        $result = $conn->query($sql); $data = []; while ($row = $result->fetch_assoc()) { $data[] = $row; }
+ORDER BY d.id DESC
+LIMIT ? OFFSET ?";
+
+$list_stmt = $conn->prepare($sql);
+$list_types = $whereTypes . 'ii';
+$list_params = array_merge($whereParams, [$limit, $offset]);
+if (!empty($whereConditions)) { $list_stmt->bind_param($list_types, ...$list_params); } else { $list_stmt->bind_param('ii', $limit, $offset); }
+$list_stmt->execute();
+$result = $list_stmt->get_result(); $data = []; while ($row = $result->fetch_assoc()) { $data[] = $row; }
 
         echo json_encode([
             "status" => "success", "data" => $data,
@@ -370,7 +376,10 @@ try {
         $dokumentasi_json = json_encode($dokumentasi_arr);
         $dokumentasi2_json = json_encode($dokumentasi2_arr);
 
-        $cek = $conn->query("SELECT id, input_by, dokumentasi, dokumentasi2 FROM penugasan WHERE id = '$id'");
+        $cek_stmt = $conn->prepare("SELECT id, input_by, dokumentasi, dokumentasi2 FROM penugasan WHERE id = ?");
+$cek_stmt->bind_param("s", $id);
+$cek_stmt->execute();
+$cek = $cek_stmt->get_result();
         
         if ($cek->num_rows > 0) {
             $row_cek = $cek->fetch_assoc();
@@ -425,7 +434,10 @@ try {
         $data = json_decode(file_get_contents("php://input"), true);
         $id = $data['id'];
 
-        $cek_pemilik = $conn->query("SELECT pegawai_id, input_by, dokumentasi, dokumentasi2 FROM penugasan WHERE id = '$id'");
+        $cek_pemilik_stmt = $conn->prepare("SELECT pegawai_id, input_by, dokumentasi, dokumentasi2 FROM penugasan WHERE id = ?");
+$cek_pemilik_stmt->bind_param("s", $id);
+$cek_pemilik_stmt->execute();
+$cek_pemilik = $cek_pemilik_stmt->get_result();
         if ($cek_pemilik->num_rows > 0) {
             $row_hapus = $cek_pemilik->fetch_assoc();
             

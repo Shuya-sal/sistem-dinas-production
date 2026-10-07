@@ -221,23 +221,31 @@ try {
         $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
         
         // KODE PERBAIKAN: Kembalikan variabel $where_clause dan filter User yang terhapus!
-        $user_filter = isset($_GET['user']) ? $conn->real_escape_string($_GET['user']) : '';
+        $user_filter = isset($_GET['user']) ? (string)$_GET['user'] : '';
         $where_clause = "";
-        
+        $where_types = "";
+        $where_params = [];
+
         if ($user_filter !== '') {
-            $where_clause = " WHERE (p.pegawai_id = '$user_filter' OR peg.nama = '$user_filter') ";
+            $where_clause = " WHERE (p.pegawai_id = ? OR peg.nama = ?) ";
+            $where_types .= "ss";
+            $where_params[] = $user_filter;
+            $where_params[] = $user_filter;
         }
 
         // 1. Tangkap Filter Hashtag dengan Sensor Anti-Undefined
-        $hashtag_filter = isset($_GET['hashtag']) ? $conn->real_escape_string($_GET['hashtag']) : '';
+        $hashtag_filter = isset($_GET['hashtag']) ? (string)$_GET['hashtag'] : '';
         if ($hashtag_filter === 'undefined') $hashtag_filter = ''; // Buang 'undefined' dari JS
 
         if ($hashtag_filter !== '') {
+            $hashtag_like = '%#' . $hashtag_filter . '%';
             if ($where_clause === "") {
-                $where_clause = " WHERE p.teks LIKE '%#$hashtag_filter%' ";
+                $where_clause = " WHERE p.teks LIKE ? ";
             } else {
-                $where_clause .= " AND p.teks LIKE '%#$hashtag_filter%' ";
+                $where_clause .= " AND p.teks LIKE ? ";
             }
+            $where_types .= "s";
+            $where_params[] = $hashtag_like;
         }
 
         // 2. Tangkap parameter sortir
@@ -260,10 +268,22 @@ try {
                         LEFT JOIN pegawai peg ON (p.pegawai_id = peg.id OR p.pegawai_id = peg.nama)
                         $where_clause
                         $order_clause
-                        LIMIT $limit OFFSET $offset";
-        $res_posts = $conn->query($query_posts);
+                        LIMIT ? OFFSET ?";
+        $stmt_posts = $conn->prepare($query_posts);
+        $stmt_posts->bind_param($where_types . "ii", ...array_merge($where_params, [$limit, $offset]));
+        $stmt_posts->execute();
+        $res_posts = $stmt_posts->get_result();
+        $stmt_posts->close();
 
         $posts = [];
+        $stmt_comments = $conn->prepare("SELECT c.*, peg.nama, peg.id AS profile_id,
+                                      (peg.foto IS NOT NULL AND peg.foto <> '') AS has_foto,
+                                      (peg.frame IS NOT NULL AND peg.frame <> '') AS has_frame,
+                                      peg.tingkat, peg.exp, peg.is_donatur, peg.is_sangean
+                               FROM forum_comments c
+                               LEFT JOIN pegawai peg ON (c.pegawai_id = peg.id OR c.pegawai_id = peg.nama)
+                               WHERE c.post_id = ?
+                               ORDER BY c.tgl_komentar ASC");
         while ($post = $res_posts->fetch_assoc()) {
             $post_id = $post['id'];
             $profile_id = $post['profile_id'] ?: $post['pegawai_id'];
@@ -271,15 +291,9 @@ try {
             $post['frame'] = !empty($post['has_frame']) ? employeeMediaUrlForum($profile_id, 'frame') : '';
             unset($post['has_foto'], $post['has_frame'], $post['profile_id']);
 
-            $query_comments = "SELECT c.*, peg.nama, peg.id AS profile_id,
-                                      (peg.foto IS NOT NULL AND peg.foto <> '') AS has_foto,
-                                      (peg.frame IS NOT NULL AND peg.frame <> '') AS has_frame,
-                                      peg.tingkat, peg.exp, peg.is_donatur, peg.is_sangean
-                               FROM forum_comments c
-                               LEFT JOIN pegawai peg ON (c.pegawai_id = peg.id OR c.pegawai_id = peg.nama)
-                               WHERE c.post_id = '$post_id'
-                               ORDER BY c.tgl_komentar ASC";
-            $res_comments = $conn->query($query_comments);
+            $stmt_comments->bind_param("s", $post_id);
+            $stmt_comments->execute();
+            $res_comments = $stmt_comments->get_result();
             $comments = [];
             while ($comment = $res_comments->fetch_assoc()) {
                 $comment_profile_id = $comment['profile_id'] ?: $comment['pegawai_id'];
@@ -291,6 +305,7 @@ try {
             $post['comments'] = $comments;
             $posts[] = $post;
         }
+        $stmt_comments->close();
         echo json_encode(["status" => "success", "data" => $posts]);
     } 
     elseif ($method == 'POST') {
@@ -345,7 +360,10 @@ try {
             if ($chat_file !== null) $message .= ($message !== '' ? ' ' : '') . $chat_file;
             
             $beri_exp = true;
-            $cek_spam = $conn->query("SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) as jeda FROM private_chats WHERE sender_id = '$my_id' ORDER BY id DESC LIMIT 1");
+            $stmt_spam = $conn->prepare("SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) as jeda FROM private_chats WHERE sender_id = ? ORDER BY id DESC LIMIT 1");
+            $stmt_spam->bind_param("s", $my_id);
+            $stmt_spam->execute();
+            $cek_spam = $stmt_spam->get_result();
             if ($cek_spam->num_rows > 0) {
                 $last_chat = $cek_spam->fetch_assoc();
                 $jeda = (int)$last_chat['jeda'];
@@ -365,7 +383,9 @@ try {
                 $stmt->bind_param("sss", $my_id, $target_id, $message);
                 if ($stmt->execute()) { 
                     if ($beri_exp) {
-                        $conn->query("UPDATE pegawai SET exp = exp + 1 WHERE id = '$my_id'"); 
+                        $stmt_exp_chat = $conn->prepare("UPDATE pegawai SET exp = exp + 1 WHERE id = ?");
+                        $stmt_exp_chat->bind_param("s", $my_id);
+                        $stmt_exp_chat->execute();
                         $exp_added = true;
                     }
                     
@@ -380,7 +400,11 @@ try {
             $my_id = $_SESSION['pegawai_id']; $msg_id = $data['msg_id'] ?? '';
             $message = htmlspecialchars(strip_tags($data['message'] ?? ''), ENT_QUOTES, 'UTF-8');
             if(!empty($msg_id) && !empty($message)) {
-                $cek = $conn->query("SELECT message FROM private_chats WHERE id = '$msg_id' AND sender_id = '$my_id'");
+                $stmt_cek_edit = $conn->prepare("SELECT message FROM private_chats WHERE id = ? AND sender_id = ?");
+                $stmt_cek_edit->bind_param("ss", $msg_id, $my_id);
+                $stmt_cek_edit->execute();
+                $cek = $stmt_cek_edit->get_result();
+                $stmt_cek_edit->close();
                 if ($cek->num_rows > 0) {
                     $row = $cek->fetch_assoc();
                     
@@ -410,7 +434,11 @@ try {
         if ($action == 'delete_chat') {
             $my_id = $_SESSION['pegawai_id']; $msg_id = $data['msg_id'] ?? '';
             if(!empty($msg_id)) {
-                $cek_chat = $conn->query("SELECT message FROM private_chats WHERE id = '$msg_id' AND sender_id = '$my_id'");
+                $stmt_cek_chat = $conn->prepare("SELECT message FROM private_chats WHERE id = ? AND sender_id = ?");
+                $stmt_cek_chat->bind_param("ss", $msg_id, $my_id);
+                $stmt_cek_chat->execute();
+                $cek_chat = $stmt_cek_chat->get_result();
+                $stmt_cek_chat->close();
                 if ($cek_chat->num_rows > 0) {
                     $row_chat = $cek_chat->fetch_assoc();
                     preg_match_all('/Uploads\/img_[a-zA-Z0-9_]+\.(jpg|jpeg|png|gif|webp)/i', $row_chat['message'], $matches_chat);
@@ -458,7 +486,11 @@ try {
 
             // Jangan percaya pegawai_id dari browser.
             $pegawai_id = $_SESSION['pegawai_id'];
-            $res = $conn->query("SELECT likes FROM forum_posts WHERE id = '$post_id'");
+            $stmt_like = $conn->prepare("SELECT likes FROM forum_posts WHERE id = ?");
+            $stmt_like->bind_param("s", $post_id);
+            $stmt_like->execute();
+            $res = $stmt_like->get_result();
+            $stmt_like->close();
             if ($res->num_rows > 0) {
                 $row = $res->fetch_assoc(); $likes_arr = [];
                 if (!empty($row['likes'])) { $likes_arr = json_decode($row['likes'], true); if (!is_array($likes_arr)) $likes_arr = []; }
@@ -480,7 +512,11 @@ try {
 
             // Identitas asli diambil dari session server.
             $pegawai_id = $_SESSION['pegawai_id'];
-            $res = $conn->query("SELECT likes FROM forum_comments WHERE id = '$comment_id'");
+            $stmt_like_kom = $conn->prepare("SELECT likes FROM forum_comments WHERE id = ?");
+            $stmt_like_kom->bind_param("s", $comment_id);
+            $stmt_like_kom->execute();
+            $res = $stmt_like_kom->get_result();
+            $stmt_like_kom->close();
             if ($res->num_rows > 0) {
                 $row = $res->fetch_assoc(); $likes_arr = [];
                 if (!empty($row['likes'])) { $likes_arr = json_decode($row['likes'], true); if (!is_array($likes_arr)) $likes_arr = []; }
@@ -524,9 +560,12 @@ try {
                             JOIN forum_comments c ON c.id = fn.comment_id
                             JOIN forum_posts p ON p.id = fn.post_id
                             JOIN pegawai peg ON peg.id = fn.actor_id
-                            WHERE fn.pegawai_id = '$my_id' AND fn.is_read = 0";
+                            WHERE fn.pegawai_id = ? AND fn.is_read = 0";
 
-            $res_forum = $conn->query($query_notif);
+            $stmt_forum = $conn->prepare($query_notif);
+            $stmt_forum->bind_param("s", $my_id);
+            $stmt_forum->execute();
+            $res_forum = $stmt_forum->get_result();
             $notifs = [];
             while($row = $res_forum->fetch_assoc()){
                 $comment_plain = html_entity_decode((string)$row['teks'], ENT_QUOTES, 'UTF-8');
@@ -546,12 +585,15 @@ try {
             }
 
             // 2. Ambil Notifikasi Chat Private
-            $query_chat = "SELECT pc.id as chat_id, pc.sender_id, peg.nama as sender_name, peg.id as sender_ref, pc.created_at, pc.message
-                           FROM private_chats pc
-                           JOIN pegawai peg ON pc.sender_id = peg.id
-                           WHERE pc.receiver_id = '$my_id' AND pc.is_read = 0";
-
-            $res_chat = $conn->query($query_chat);
+            $stmt_chat_notif = $conn->prepare(
+                "SELECT pc.id as chat_id, pc.sender_id, peg.nama as sender_name, peg.id as sender_ref, pc.created_at, pc.message
+                 FROM private_chats pc
+                 JOIN pegawai peg ON pc.sender_id = peg.id
+                 WHERE pc.receiver_id = ? AND pc.is_read = 0"
+            );
+            $stmt_chat_notif->bind_param("s", $my_id);
+            $stmt_chat_notif->execute();
+            $res_chat = $stmt_chat_notif->get_result();
             while($row_chat = $res_chat->fetch_assoc()){
                 $chat_plain = html_entity_decode((string)$row_chat['message'], ENT_QUOTES, 'UTF-8');
                 $notifs[] = [
@@ -719,7 +761,11 @@ try {
             // ==========================================
             // SATPAM 2: CEK KEPEMILIKAN POSTINGAN
             // ==========================================
-            $cek_pemilik = $conn->query("SELECT pegawai_id FROM forum_posts WHERE id = '$id'");
+            $stmt_cek_pemilik_post = $conn->prepare("SELECT pegawai_id FROM forum_posts WHERE id = ?");
+            $stmt_cek_pemilik_post->bind_param("s", $id);
+            $stmt_cek_pemilik_post->execute();
+            $cek_pemilik = $stmt_cek_pemilik_post->get_result();
+            $stmt_cek_pemilik_post->close();
             if ($cek_pemilik->num_rows > 0) {
                 $pemilik = $cek_pemilik->fetch_assoc()['pegawai_id'];
                 // Jika bukan pembuatnya dan bukan God Creator, TENDANG!
@@ -733,7 +779,11 @@ try {
             }
             // ==========================================
 
-            $cek = $conn->query("SELECT media, teks FROM forum_posts WHERE id = '$id'");
+            $stmt_cek_media_post = $conn->prepare("SELECT media, teks FROM forum_posts WHERE id = ?");
+            $stmt_cek_media_post->bind_param("s", $id);
+            $stmt_cek_media_post->execute();
+            $cek = $stmt_cek_media_post->get_result();
+            $stmt_cek_media_post->close();
             if ($cek->num_rows > 0) {
                 $row = $cek->fetch_assoc();
                 if (!empty($row['teks'])) {
@@ -753,7 +803,11 @@ try {
                 }
             }
             
-            $cek_komen = $conn->query("SELECT teks FROM forum_comments WHERE post_id = '$id'");
+            $stmt_cek_komen_post = $conn->prepare("SELECT teks FROM forum_comments WHERE post_id = ?");
+            $stmt_cek_komen_post->bind_param("s", $id);
+            $stmt_cek_komen_post->execute();
+            $cek_komen = $stmt_cek_komen_post->get_result();
+            $stmt_cek_komen_post->close();
             while ($row_komen = $cek_komen->fetch_assoc()) {
                 if (!empty($row_komen['teks'])) {
                     preg_match_all('/Uploads\/img_[a-zA-Z0-9_]+\.(jpg|jpeg|png|gif|webp)/i', $row_komen['teks'], $matches_komen);
@@ -762,9 +816,11 @@ try {
                     }
                 }
             }
-            $conn->query("DELETE FROM forum_posts WHERE id = '$id'");
-            $conn->query("DELETE FROM forum_comments WHERE post_id = '$id'");
-            
+            $stmt_del_post = $conn->prepare("DELETE FROM forum_posts WHERE id = ?");
+            $stmt_del_post->bind_param("s", $id); $stmt_del_post->execute();
+            $stmt_del_komen_post = $conn->prepare("DELETE FROM forum_comments WHERE post_id = ?");
+            $stmt_del_komen_post->bind_param("s", $id); $stmt_del_komen_post->execute();
+
             echo json_encode(["status" => "success"]); exit;
         }
         elseif ($action == 'hapus_komentar') {
@@ -773,7 +829,11 @@ try {
             // ==========================================
             // SATPAM 2B: CEK KEPEMILIKAN KOMENTAR
             // ==========================================
-            $cek_pemilik = $conn->query("SELECT pegawai_id FROM forum_comments WHERE id = '$id'");
+            $stmt_cek_pemilik_kom = $conn->prepare("SELECT pegawai_id FROM forum_comments WHERE id = ?");
+            $stmt_cek_pemilik_kom->bind_param("s", $id);
+            $stmt_cek_pemilik_kom->execute();
+            $cek_pemilik = $stmt_cek_pemilik_kom->get_result();
+            $stmt_cek_pemilik_kom->close();
             if ($cek_pemilik->num_rows > 0) {
                 $pemilik = $cek_pemilik->fetch_assoc()['pegawai_id'];
                 if ($server_user_nama !== $pemilik && $server_user_tingkat !== 'God Creator') {
@@ -786,7 +846,11 @@ try {
             }
             // ==========================================
 
-            $cek_komen = $conn->query("SELECT teks FROM forum_comments WHERE id = '$id'");
+            $stmt_cek_komen_byid = $conn->prepare("SELECT teks FROM forum_comments WHERE id = ?");
+            $stmt_cek_komen_byid->bind_param("s", $id);
+            $stmt_cek_komen_byid->execute();
+            $cek_komen = $stmt_cek_komen_byid->get_result();
+            $stmt_cek_komen_byid->close();
             if ($cek_komen->num_rows > 0) {
                 $row_komen = $cek_komen->fetch_assoc();
                 if (!empty($row_komen['teks'])) {
@@ -796,8 +860,9 @@ try {
                     }
                 }
             }
-            $conn->query("DELETE FROM forum_comments WHERE id = '$id'"); 
-            
+            $stmt_del_komen = $conn->prepare("DELETE FROM forum_comments WHERE id = ?");
+            $stmt_del_komen->bind_param("s", $id); $stmt_del_komen->execute();
+
             echo json_encode(["status" => "success"]); exit;
         }
         elseif ($action == 'edit_post') {
@@ -805,7 +870,11 @@ try {
             $teks = htmlspecialchars(strip_tags($data['teks'] ?? ''), ENT_QUOTES, 'UTF-8');
             
             // SATPAM EDIT: Cek Kepemilikan sebelum mengedit
-            $cek_pemilik = $conn->query("SELECT pegawai_id FROM forum_posts WHERE id = '$id'");
+            $stmt_cek_pemilik_epost = $conn->prepare("SELECT pegawai_id FROM forum_posts WHERE id = ?");
+            $stmt_cek_pemilik_epost->bind_param("s", $id);
+            $stmt_cek_pemilik_epost->execute();
+            $cek_pemilik = $stmt_cek_pemilik_epost->get_result();
+            $stmt_cek_pemilik_epost->close();
             if ($cek_pemilik->num_rows > 0) {
                 $pemilik = $cek_pemilik->fetch_assoc()['pegawai_id'];
                 if ($server_user_nama !== $pemilik && $server_user_tingkat !== 'God Creator') {
@@ -815,7 +884,11 @@ try {
             }
 
             // Bersihkan gambar inline jika dihapus saat edit Postingan
-            $cek = $conn->query("SELECT teks FROM forum_posts WHERE id = '$id'");
+            $stmt_cek_teks_epost = $conn->prepare("SELECT teks FROM forum_posts WHERE id = ?");
+            $stmt_cek_teks_epost->bind_param("s", $id);
+            $stmt_cek_teks_epost->execute();
+            $cek = $stmt_cek_teks_epost->get_result();
+            $stmt_cek_teks_epost->close();
             if ($cek->num_rows > 0) {
                 $row = $cek->fetch_assoc();
                 preg_match_all('/Uploads\/img_[a-zA-Z0-9_]+\.(jpg|jpeg|png|gif|webp)/i', $row['teks'], $old_matches);
@@ -834,7 +907,11 @@ try {
             $teks = htmlspecialchars(strip_tags($data['teks'] ?? ''), ENT_QUOTES, 'UTF-8');
             
             // SATPAM EDIT: Cek Kepemilikan sebelum mengedit
-            $cek_pemilik = $conn->query("SELECT pegawai_id, teks FROM forum_comments WHERE id = '$id'");
+            $stmt_cek_pemilik_ekom = $conn->prepare("SELECT pegawai_id, teks FROM forum_comments WHERE id = ?");
+            $stmt_cek_pemilik_ekom->bind_param("s", $id);
+            $stmt_cek_pemilik_ekom->execute();
+            $cek_pemilik = $stmt_cek_pemilik_ekom->get_result();
+            $stmt_cek_pemilik_ekom->close();
             if ($cek_pemilik->num_rows > 0) {
                 $row_pem = $cek_pemilik->fetch_assoc();
                 $pemilik = $row_pem['pegawai_id'];
@@ -854,7 +931,11 @@ try {
             }
 
             // Bersihkan gambar inline jika dihapus saat edit Komentar
-            $cek = $conn->query("SELECT teks FROM forum_comments WHERE id = '$id'");
+            $stmt_cek_teks_ekom = $conn->prepare("SELECT teks FROM forum_comments WHERE id = ?");
+            $stmt_cek_teks_ekom->bind_param("s", $id);
+            $stmt_cek_teks_ekom->execute();
+            $cek = $stmt_cek_teks_ekom->get_result();
+            $stmt_cek_teks_ekom->close();
             if ($cek->num_rows > 0) {
                 $row = $cek->fetch_assoc();
                 preg_match_all('/Uploads\/img_[a-zA-Z0-9_]+\.(jpg|jpeg|png|gif|webp)/i', $row['teks'], $old_matches);
