@@ -243,7 +243,7 @@ window.editPegawai = async function(id) {
         setVal('pegawaiPangkat', p.pangkat);
         setVal('pegawaiGolongan', p.golongan);
         setVal('pegawaiBagian', p.bagian);
-        setVal('pegawaiStatus', p.status);
+        setVal('pegawaiStatus', p.status === 'Honorer' ? 'Kontrak' : p.status);
         setVal('pegawaiTingkat', p.tingkat || 'Staf');
         setVal('pegawaiNik', p.nik);
         setVal('pegawaiTempatLahir', p.tempat_lahir);

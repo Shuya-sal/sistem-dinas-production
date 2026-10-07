@@ -681,7 +681,7 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
                 } elseif (stripos($status_raw, 'PPPK') !== false) {
                     $status = 'PPPK';
                 } elseif (stripos($status_raw, 'Honorer') !== false || stripos($status_raw, 'Kontrak') !== false) {
-                    $status = 'Honorer';
+                    $status = 'Kontrak';
                 } elseif (stripos($status_raw, 'PNS') !== false || stripos($status_raw, 'ASN') !== false) {
                     $status = 'PNS';
                 } else {
