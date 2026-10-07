@@ -679,8 +679,10 @@ window.renderFeed = function(posts) {
                 
                 const classVIPKomentar = (c.is_donatur == 1 || c.is_donatur == "1") ? 'comment-vip-donatur' : '';
                 const waktuRelatif = window.timeAgo(c.tgl_komentar);
+                const badgesKomenRaw = (badgeKomentar || '').trim();
+                const badgesKomenHtml = badgesKomenRaw ? `<span class="author-badges">${badgesKomenRaw}</span>` : '';
 
-                commentsHtml += `<div class="comment-item comment-group-${p.id}" style="${hiddenStyle} margin-bottom:10px;">${avatarKomentator}<div class="comment-bubble ${classVIPKomentar}" style="position: relative; padding-right: 30px;"><span class="comment-author"><a href="javascript:void(0)" onclick="navigasiSPA('profile.html?user=${encodeURIComponent(namaKomentatorAsli)}')" class="link-profil" style="color:inherit; text-decoration:none;">${namaKomentatorAsli}</a>${badgeKomentar}</span><div class="comment-text" id="komentar-text-${c.id}">${formatPesanChat(c.teks)}</div>${actionKomentarHtml}<span class="comment-time" title="${c.tgl_komentar}">${waktuRelatif}</span>${dropdownKomentarHtml}</div></div>`;
+                commentsHtml += `<div class="comment-item comment-group-${p.id}" style="${hiddenStyle} margin-bottom:10px;">${avatarKomentator}<div class="comment-bubble ${classVIPKomentar}" style="position: relative; padding-right: 30px;"><span class="comment-author"><a href="javascript:void(0)" onclick="navigasiSPA('profile.html?user=${encodeURIComponent(namaKomentatorAsli)}')" class="link-profil" style="color:inherit; text-decoration:none;">${namaKomentatorAsli}</a>${badgesKomenHtml ? ' ' + badgesKomenHtml : ''}</span><div class="comment-text" id="komentar-text-${c.id}">${formatPesanChat(c.teks)}</div>${actionKomentarHtml}<span class="comment-time" title="${c.tgl_komentar}">${waktuRelatif}</span>${dropdownKomentarHtml}</div></div>`;
             });
         }
 
@@ -688,7 +690,9 @@ window.renderFeed = function(posts) {
         let badgePost = window.getBadgeHTML ? window.getBadgeHTML(p.exp) : ''; 
         if (window.getRoleBadgeHTML) { badgePost += window.getRoleBadgeHTML(p.tingkat); }
         if (window.getCustomTagsHTML) { badgePost += window.getCustomTagsHTML(p.is_donatur, p.is_sangean); }
-        let pinBadgeHtml = ''; if (p.is_pinned == 1) { pinBadgeHtml = `<span style="background-color: #f59e0b; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center;">📌 Disematkan</span>`; }
+        let pinBadgeHtml = ''; if (p.is_pinned == 1) { pinBadgeHtml = `<span style="background-color: #f59e0b; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center;">📌 Disematkan</span>`; }
+        const badgesPostRaw = (badgePost + (pinBadgeHtml ? ' ' + pinBadgeHtml : '')).trim();
+        const badgesPostHtml = badgesPostRaw ? `<span class="author-badges">${badgesPostRaw}</span>` : '';
         
         let dropdownHtml = ''; let pinMenuHtml = '';
         if (loggedInUser.tingkat === 'God Creator') { 
@@ -740,7 +744,7 @@ window.renderFeed = function(posts) {
             <div class="post-header-top">
                 <div class="post-header">${avatarPembuat}
                     <div>
-                        <span class="post-author"><a href="javascript:void(0)" onclick="navigasiSPA('profile.html?user=${encodeURIComponent(namaPembuatAsli)}')" class="link-profil" style="color:inherit; text-decoration:none;">${namaPembuatAsli}</a> ${badgePost} ${pinBadgeHtml}</span>
+                        <span class="post-author"><a href="javascript:void(0)" onclick="navigasiSPA('profile.html?user=${encodeURIComponent(namaPembuatAsli)}')" class="link-profil" style="color:inherit; text-decoration:none;">${namaPembuatAsli}</a>${badgesPostHtml ? ' ' + badgesPostHtml : ''}</span>
                         <span class="post-time" title="${p.tgl_posting}">${waktuPostRelatif}</span>
                     </div>
                 </div>${dropdownHtml}
