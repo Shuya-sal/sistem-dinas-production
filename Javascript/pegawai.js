@@ -1,6 +1,6 @@
 var dbPegawai = [];
 var placeholderFotoPegawai = "Image/default.jpg";
-var currentFotoBase64Pegawai = null;
+var currentFotoFilePegawai = null;
 var currentPagePegawai = 1;
 var rowsPerPagePegawai = 10; 
 var currentSearchKeywordPegawai = ""; 
@@ -64,15 +64,18 @@ window.initPegawaiSPA = function() {
         pegawaiForm.onsubmit = async function(e) {
             e.preventDefault();
             const id = document.getElementById('editPegawaiId').value || Date.now().toString();
-            let fotoFinal = currentFotoBase64Pegawai;
-            if (!fotoFinal) { const idx = dbPegawai.findIndex(p => p.id === id); fotoFinal = idx !== -1 ? dbPegawai[idx].foto : placeholderFotoPegawai; }
+            const fotoFile = currentFotoFilePegawai;
+            const idx = dbPegawai.findIndex(p => p.id === id); const fotoFinal = idx !== -1 ? dbPegawai[idx].foto : placeholderFotoPegawai;
 
             const payload = {
                 action: 'simpan', id: id, nama: document.getElementById('pegawaiNama').value, nip: document.getElementById('pegawaiNip').value, jabatan: document.getElementById('pegawaiJabatan').value, pangkat: document.getElementById('pegawaiPangkat').value, golongan: document.getElementById('pegawaiGolongan').value, bagian: document.getElementById('pegawaiBagian').value, status: document.getElementById('pegawaiStatus').value, password: document.getElementById('pegawaiPassword').value, tingkat: document.getElementById('pegawaiTingkat').value, nik: document.getElementById('pegawaiNik') ? document.getElementById('pegawaiNik').value : '', tempat_lahir: document.getElementById('pegawaiTempatLahir') ? document.getElementById('pegawaiTempatLahir').value : '', tgl_lahir: document.getElementById('pegawaiTglLahir') ? document.getElementById('pegawaiTglLahir').value : '', alamat: document.getElementById('pegawaiAlamat') ? document.getElementById('pegawaiAlamat').value : '', foto: fotoFinal, is_self_update: false
             };
 
             try {
-                const response = await fetch('PHP/api_pegawai.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const result = await response.json();
+                const formData = new FormData();
+                Object.entries(payload).forEach(([key, value]) => formData.append(key, value == null ? '' : String(value)));
+                if (fotoFile) formData.append('foto', fotoFile, fotoFile.name);
+                const response = await fetch('PHP/api_pegawai.php', { method: 'POST', body: formData }); const result = await response.json();
                 if(result.status === "success") {
                     const namaLoginBersih = String(loggedInUser.nama).trim().toLowerCase();
                     if (namaLoginBersih === payload.nama.trim().toLowerCase()) {
@@ -100,23 +103,16 @@ async function fetchPegawai(page = 1) {
 }
 
 function previewImage(input) {
-    const preview = document.getElementById('fotoPreview'); const file = input.files[0];
-    if (!file) { preview.src = placeholderFotoPegawai; currentFotoBase64Pegawai = null; return; }
-    if (file.size > 5 * 1024 * 1024) { alert("Maksimal berkas 5MB."); input.value = ""; return; }
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas'); const MAX_WIDTH = 300; const scaleSize = MAX_WIDTH / img.width; canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
-            const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7); preview.src = compressedBase64; currentFotoBase64Pegawai = compressedBase64; 
-        }; img.src = e.target.result;
-    }; reader.readAsDataURL(file);
+    const preview=document.getElementById('fotoPreview'); const file=input.files[0];
+    if(!file){preview.src=placeholderFotoPegawai;currentFotoFilePegawai=null;return;}
+    if(file.size>5*1024*1024){alert('Maksimal berkas 5MB.');input.value='';return;}
+    currentFotoFilePegawai=file; preview.src=URL.createObjectURL(file);
 }
+
 
 window.resetFormPegawai = function() {
     const formPegawai = document.getElementById('pegawaiForm'); if(!formPegawai) return;
-    formPegawai.reset(); document.getElementById('editPegawaiId').value = ''; document.getElementById('fotoPreview').src = placeholderFotoPegawai; currentFotoBase64Pegawai = null;
+    formPegawai.reset(); document.getElementById('editPegawaiId').value = ''; document.getElementById('fotoPreview').src = placeholderFotoPegawai; currentFotoFilePegawai = null;
     const passInput = document.getElementById('pegawaiPassword'); if (passInput) { passInput.required = true; passInput.placeholder = 'Buat password login'; }
     document.getElementById('formTitle').innerText = "Form Input Pegawai";
 }
@@ -258,7 +254,7 @@ window.editPegawai = async function(id) {
         if (passInput) { passInput.value = ''; passInput.required = false; passInput.placeholder = 'Kosongkan jika tidak ingin mengubah password'; }
 
         document.getElementById('fotoPreview').src = p.foto || placeholderFotoPegawai;
-        currentFotoBase64Pegawai = null;
+        currentFotoFilePegawai = null;
         const fotoInput = document.getElementById('pegawaiFoto'); if (fotoInput) fotoInput.value = "";
         document.getElementById('formTitle').innerText = "✏️ Mode Edit Data Pegawai";
         window.scrollTo({ top: 0, behavior: 'smooth' });

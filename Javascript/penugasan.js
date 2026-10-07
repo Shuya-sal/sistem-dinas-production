@@ -16,8 +16,8 @@ var currentSearchTanggalAkhir = "";
 var timeoutSearchDinas;
 
 window.isFillingForm = false;
-window.dokumentasiFilesBase64_1 = [];
-window.dokumentasiFilesBase64_2 = [];
+window.dokumentasiUploads_1 = [];
+window.dokumentasiUploads_2 = [];
 
 function bulanKeRomawi(tanggal) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal || '')) {
@@ -248,7 +248,7 @@ window.toggleDokumentasi2Visibility = function() {
             doc2Input.parentElement.style.display = 'none';  
             
             // Hapus paksa foto Titik 2 yang terlanjur diunggah agar tidak bocor tersimpan
-            window.dokumentasiFilesBase64_2 = [];
+            window.dokumentasiUploads_2 = [];
             const previewArea = document.getElementById('previewDokumentasi2');
             if (previewArea) previewArea.innerHTML = '';
             doc2Input.value = '';
@@ -606,9 +606,6 @@ window.initPenugasanSPA = function() {
                     return pb + (ks ? '|#|KESIMPULAN|#|' + ks : '');
                 })(), 
                 
-                // Menyisipkan gambar Titik 1 dan Titik 2
-                dokumentasi: window.dokumentasiFilesBase64_1, 
-                dokumentasi2: window.dokumentasiFilesBase64_2
             };
 
             if (!payload.pegawaiId) { 
@@ -622,11 +619,11 @@ window.initPenugasanSPA = function() {
             }
 
             try {
-                const response = await fetch('PHP/api_penugasan.php', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload) 
-                }); 
+                const form = new FormData();
+                Object.entries(payload).forEach(([key, value]) => form.append(key, value == null ? '' : String(value)));
+                (window.dokumentasiUploads_1 || []).forEach(item => { if (item && item.file) form.append('dokumentasi[]', item.file, item.file.name); else if (typeof item === 'string' && item.indexOf('Uploads/') === 0) form.append('dokumentasi[]', item); });
+                (window.dokumentasiUploads_2 || []).forEach(item => { if (item && item.file) form.append('dokumentasi2[]', item.file, item.file.name); else if (typeof item === 'string' && item.indexOf('Uploads/') === 0) form.append('dokumentasi2[]', item); });
+                const response = await fetch('PHP/api_penugasan.php', { method: 'POST', body: form });
                 const result = await response.json();
                 
                 if(result.status === "success") { 
@@ -1521,8 +1518,8 @@ window.isiFormKeLayar = function(d) {
     }
     
     // MENGISI KEMBALI GAMBAR DARI DATABASE KE FORM
-    try { window.dokumentasiFilesBase64_1 = d.dokumentasi ? JSON.parse(d.dokumentasi) : []; } catch(e) { window.dokumentasiFilesBase64_1 = []; } 
-    try { window.dokumentasiFilesBase64_2 = d.dokumentasi2 ? JSON.parse(d.dokumentasi2) : []; } catch(e) { window.dokumentasiFilesBase64_2 = []; } 
+    try { window.dokumentasiUploads_1 = d.dokumentasi ? JSON.parse(d.dokumentasi) : []; } catch(e) { window.dokumentasiUploads_1 = []; }
+    try { window.dokumentasiUploads_2 = d.dokumentasi2 ? JSON.parse(d.dokumentasi2) : []; } catch(e) { window.dokumentasiUploads_2 = []; }
     
     if(window.renderPreviewDokumentasi) { 
         window.renderPreviewDokumentasi(1); 
@@ -1756,55 +1753,23 @@ window.bulkPrintTerpilih = function() {
 };
 
 window.previewDokumentasiDinas = async function(input, titik) {
-    const files = input.files;
-    if (!files || files.length === 0) return;
-    
-    let targetArray = titik === 1 ? window.dokumentasiFilesBase64_1 : window.dokumentasiFilesBase64_2;
-    if (targetArray.length + files.length > 6) { alert("Maksimal 6 foto per kegiatan/titik!"); input.value = ""; return; }
-
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith('image/')) continue;
-        
-        await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = async function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1000; 
-                    let width = img.width; let height = img.height;
-                    
-                    if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Langsung simpan Base64 ke dalam array untuk dikirim ke PHP
-                    const base64Str = canvas.toDataURL('image/jpeg', 0.8);
-                    targetArray.push(base64Str); 
-                    window.renderPreviewDokumentasi(titik);
-                    
-                    resolve();
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-    input.value = ""; 
-}
+    const files=input.files;if(!files||!files.length)return; const key=titik===1?'dokumentasiUploads_1':'dokumentasiUploads_2'; if(!window[key])window[key]=[];
+    if(window[key].length+files.length>6){alert('Maksimal 6 foto per kegiatan/titik!');input.value='';return;}
+    for(let i=0;i<files.length;i++){const file=files[i];if(!file.type.startsWith('image/'))continue;window[key].push({file:file,preview:URL.createObjectURL(file)});}
+    window.renderPreviewDokumentasi(titik);input.value='';
+};
 
 window.renderPreviewDokumentasi = function(titik) {
     const container = document.getElementById('previewDokumentasi' + titik);
     if (!container) return;
     
-    const arr = titik === 1 ? window.dokumentasiFilesBase64_1 : window.dokumentasiFilesBase64_2;
+    const arr = titik === 1 ? window.dokumentasiUploads_1 : window.dokumentasiUploads_2;
     container.innerHTML = '';
     
     arr.forEach((src, index) => {
         container.innerHTML += `
             <div style="position: relative; display: inline-block; width: 80px;">
-                <img src="${src}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; cursor: zoom-in;" onclick="if(window.openMediaModal) window.openMediaModal(this.src, 'image')">
+                <img src="${src.preview || src}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; cursor: zoom-in;" onclick="if(window.openMediaModal) window.openMediaModal(this.src, 'image')">
                 <button type="button" onclick="hapusDokumentasiDinas(${index}, ${titik})" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; font-size: 10px; line-height: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">X</button>
             </div>
         `;
@@ -1813,9 +1778,9 @@ window.renderPreviewDokumentasi = function(titik) {
 
 window.hapusDokumentasiDinas = function(index, titik) {
     if (titik === 1) {
-        window.dokumentasiFilesBase64_1.splice(index, 1);
+        window.dokumentasiUploads_1.splice(index, 1);
     } else {
-        window.dokumentasiFilesBase64_2.splice(index, 1);
+        window.dokumentasiUploads_2.splice(index, 1);
     }
     window.renderPreviewDokumentasi(titik);
 }
@@ -1828,8 +1793,8 @@ window.resetFormDinas = function() {
     document.getElementById('containerRincianBiaya').style.display = 'none';
     
     // MENGHAPUS PREVIEW FOTO
-    window.dokumentasiFilesBase64_1 = []; 
-    window.dokumentasiFilesBase64_2 = []; 
+    window.dokumentasiUploads_1 = [];
+    window.dokumentasiUploads_2 = [];
     if(document.getElementById('previewDokumentasi1')) document.getElementById('previewDokumentasi1').innerHTML = '';
     if(document.getElementById('previewDokumentasi2')) document.getElementById('previewDokumentasi2').innerHTML = '';
     

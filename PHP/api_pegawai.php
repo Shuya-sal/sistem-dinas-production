@@ -23,6 +23,38 @@ function makeEmployeeMediaUrl($employee_id, $media_type) {
     return 'PHP/api_pegawai.php?media=' . rawurlencode($media_type) . '&id=' . rawurlencode($employee_id);
 }
 
+function saveEmployeeUpload($file, $prefix, $allowed_mimes) {
+    if (!is_array($file)) { return null; }
+    $upload_error = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($upload_error === UPLOAD_ERR_NO_FILE) { return null; }
+    if ($upload_error !== UPLOAD_ERR_OK) {
+        $upload_messages = [
+            UPLOAD_ERR_INI_SIZE => 'Ukuran file melebihi batas upload server.',
+            UPLOAD_ERR_FORM_SIZE => 'Ukuran file melebihi batas formulir.',
+            UPLOAD_ERR_PARTIAL => 'Upload file tidak selesai.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Folder sementara upload tidak tersedia.',
+            UPLOAD_ERR_CANT_WRITE => 'Server tidak dapat menulis file upload.',
+            UPLOAD_ERR_EXTENSION => 'Upload dihentikan oleh ekstensi PHP.'
+        ];
+        throw new Exception($upload_messages[$upload_error] ?? 'Upload file gagal.');
+    }
+    if (($file['size'] ?? 0) <= 0 || ($file['size'] ?? 0) > 12 * 1024 * 1024) { throw new Exception('Ukuran file tidak valid.'); }
+    $tmp = $file['tmp_name'] ?? '';
+    if (!is_uploaded_file($tmp)) { throw new Exception('Upload file tidak valid.'); }
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
+    $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+    if (!in_array($mime, $allowed_mimes, true) || !isset($extensions[$mime])) { throw new Exception('Format gambar ditolak.'); }
+    $dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Users' . DIRECTORY_SEPARATOR . 'Image';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) { throw new Exception('Folder media tidak dapat dibuat.'); }
+    @chmod($dir, 0755);
+    if (!is_writable($dir)) { throw new Exception('Folder media tidak dapat ditulisi oleh server.'); }
+    $relative = 'Users/Image/' . $prefix . '_' . bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
+    $destination = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+    if (!move_uploaded_file($tmp, $destination)) { throw new Exception('File gagal disimpan.'); }
+    @chmod($destination, 0644);
+    return $relative;
+}
+
 try {
     try { $conn->query("ALTER TABLE pegawai ADD COLUMN cover VARCHAR(255) NULL"); } catch (Exception $e) {}
     try { $conn->query("ALTER TABLE pegawai ADD COLUMN frame VARCHAR(255) NULL"); } catch (Exception $e) {}
@@ -253,7 +285,9 @@ try {
         exit;
     } 
     elseif ($method == 'POST') {
-        $data = json_decode(file_get_contents("php://input"), true);
+        $is_multipart = isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false;
+        $data = $is_multipart ? $_POST : json_decode(file_get_contents("php://input"), true);
+        if (!is_array($data)) { $data = []; }
         $action = $data['action'] ?? 'simpan';
 
         // =========================================================
@@ -264,10 +298,12 @@ try {
         if ($action === 'tambah_stiker') {
             $id = $server_user_id; 
             $bg = $data['stiker_base64'] ?? '';
+            $uploaded_stiker = saveEmployeeUpload($_FILES['file'] ?? $_FILES['stiker'] ?? null, 'stiker', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
-            if (empty($bg)) { echo json_encode(["status" => "error", "message" => "Gambar stiker kosong."]); exit; }
+            if ($uploaded_stiker !== null) { $stiker_url = $uploaded_stiker; }
+            elseif (empty($bg)) { echo json_encode(["status" => "error", "message" => "Gambar stiker kosong."]); exit; }
 
-            if (preg_match('/^data:image\/(\w+);base64,/', $bg, $type)) {
+            if (!isset($stiker_url) && preg_match('/^data:image\/(\w+);base64,/', $bg, $type)) {
                 $base64_data = substr($bg, strpos($bg, ',') + 1);
                 $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
@@ -282,7 +318,7 @@ try {
                 } else {
                     echo json_encode(["status" => "error", "message" => "Format stiker ditolak."]); exit;
                 }
-            } else { echo json_encode(["status" => "error", "message" => "Data tidak valid."]); exit; }
+            } elseif (!isset($stiker_url)) { echo json_encode(["status" => "error", "message" => "Data tidak valid."]); exit; }
             
             $cek = $conn->query("SELECT stiker FROM pegawai WHERE id = '$id'");
             $stiker_arr = [];
@@ -328,12 +364,14 @@ try {
         if ($action === 'update_frame') {
             $id = $server_user_id;
             $frame = $data['frame'] ?? '';
+            $uploaded_frame = saveEmployeeUpload($_FILES['frame'] ?? $_FILES['file'] ?? null, 'frame', ['image/png', 'image/webp', 'image/gif']);
+            if ($uploaded_frame !== null) { $frame = $uploaded_frame; }
 
             $cek_old = $conn->query("SELECT frame FROM pegawai WHERE id = '$id'");
             $old_frame = '';
             if ($cek_old->num_rows > 0) { $old_frame = $cek_old->fetch_assoc()['frame']; }
 
-            if (preg_match('/^data:image\/(\w+);base64,/', $frame, $type)) {
+            if ($uploaded_frame === null && preg_match('/^data:image\/(\w+);base64,/', $frame, $type)) {
                 $base64_data = substr($frame, strpos($frame, ',') + 1);
                 $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
@@ -401,12 +439,14 @@ try {
         if ($action === 'update_cover') {
             $id = $server_user_id;
             $cover = $data['cover'] ?? '';
+            $uploaded_cover = saveEmployeeUpload($_FILES['cover'] ?? $_FILES['file'] ?? null, 'cover', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+            if ($uploaded_cover !== null) { $cover = $uploaded_cover; }
 
             $cek_old = $conn->query("SELECT cover FROM pegawai WHERE id = '$id'");
             $old_cover = '';
             if ($cek_old->num_rows > 0) { $old_cover = $cek_old->fetch_assoc()['cover']; }
 
-            if (preg_match('/^data:image\/(\w+);base64,/', $cover, $type)) {
+            if ($uploaded_cover === null && preg_match('/^data:image\/(\w+);base64,/', $cover, $type)) {
                 $base64_data = substr($cover, strpos($cover, ',') + 1); $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
@@ -431,12 +471,14 @@ try {
         if ($action === 'update_background') {
             $id = $server_user_id;
             $bg = $data['background_page'] ?? '';
+            $uploaded_background = saveEmployeeUpload($_FILES['background_page'] ?? $_FILES['file'] ?? null, 'bg', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+            if ($uploaded_background !== null) { $bg = $uploaded_background; }
 
             $cek_old = $conn->query("SELECT background_page FROM pegawai WHERE id = '$id'");
             $old_bg = '';
             if ($cek_old->num_rows > 0) { $old_bg = $cek_old->fetch_assoc()['background_page']; }
 
-            if (preg_match('/^data:image\/(\w+);base64,/', $bg, $type)) {
+            if ($uploaded_background === null && preg_match('/^data:image\/(\w+);base64,/', $bg, $type)) {
                 $base64_data = substr($bg, strpos($bg, ',') + 1); $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
@@ -641,23 +683,34 @@ try {
                 $id = $conn->real_escape_string($data['id']); 
             }
 
-            $nama = $data['nama'];
-            $nip = $data['nip'];
-            $jabatan = $data['jabatan'];
-            $pangkat = $data['pangkat'];
-            $golongan = $data['golongan'];
-            $bagian = $data['bagian'];
-            $status = $data['status'];
-            $password_input = $data['password'];
-            $tingkat = $data['tingkat'];
-            $foto = $data['foto'] ?? '';
-            
-            $nik = $data['nik'] ?? '';
-            $tempat_lahir = $data['tempat_lahir'] ?? '';
-            $tgl_lahir = $data['tgl_lahir'] ?? '';
-            $alamat = $data['alamat'] ?? '';
+            // Upload profil dapat mengirim file saja; pertahankan field lama yang tidak dikirim.
+            $current = [];
+            $current_stmt = $conn->prepare("SELECT nama, nip, jabatan, pangkat, golongan, bagian, status, password, tingkat, foto, nik, tempat_lahir, tgl_lahir, alamat FROM pegawai WHERE id = ? LIMIT 1");
+            $current_stmt->bind_param("s", $id);
+            $current_stmt->execute();
+            $current_result = $current_stmt->get_result();
+            if ($current_result && ($current_row = $current_result->fetch_assoc())) { $current = $current_row; }
+            $current_stmt->close();
 
-            if (preg_match('/^data:image\/(\w+);base64,/', $foto, $type)) {
+            $nama = $data['nama'] ?? ($current['nama'] ?? '');
+            $nip = $data['nip'] ?? ($current['nip'] ?? '');
+            $jabatan = $data['jabatan'] ?? ($current['jabatan'] ?? '');
+            $pangkat = $data['pangkat'] ?? ($current['pangkat'] ?? '');
+            $golongan = $data['golongan'] ?? ($current['golongan'] ?? '');
+            $bagian = $data['bagian'] ?? ($current['bagian'] ?? '');
+            $status = $data['status'] ?? ($current['status'] ?? '');
+            $password_input = $data['password'] ?? '';
+            $tingkat = $data['tingkat'] ?? ($current['tingkat'] ?? 'Staf');
+            $foto = array_key_exists('foto', $data) ? $data['foto'] : ($current['foto'] ?? '');
+            $uploaded_foto = saveEmployeeUpload($_FILES['foto'] ?? $_FILES['file'] ?? null, 'pegawai', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+            if ($uploaded_foto !== null) { $foto = $uploaded_foto; }
+            
+            $nik = $data['nik'] ?? ($current['nik'] ?? '');
+            $tempat_lahir = $data['tempat_lahir'] ?? ($current['tempat_lahir'] ?? '');
+            $tgl_lahir = $data['tgl_lahir'] ?? ($current['tgl_lahir'] ?? '');
+            $alamat = $data['alamat'] ?? ($current['alamat'] ?? '');
+
+            if ($uploaded_foto === null && preg_match('/^data:image\/(\w+);base64,/', $foto, $type)) {
                 $base64_data = substr($foto, strpos($foto, ',') + 1); $base64_data = str_replace(' ', '+', $base64_data);
                 $decoded = base64_decode($base64_data);
                 $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
@@ -702,7 +755,7 @@ try {
                 $stmt->bind_param("sssssssssssssss", $id, $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $password_final, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat);
             }
             
-            if ($stmt->execute()) echo json_encode(["status" => "success"]); 
+            if ($stmt->execute()) echo json_encode(["status" => "success", "foto" => $foto]);
             else echo json_encode(["status" => "error", "message" => $stmt->error]);
             exit;
         }

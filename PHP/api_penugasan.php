@@ -245,7 +245,10 @@ try {
         
     } elseif ($method == 'POST') {
         
-        $data = json_decode(file_get_contents("php://input"), true);
+        $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
+        $is_multipart = strpos($content_type, 'multipart/form-data') !== false;
+        $data = $is_multipart ? $_POST : json_decode(file_get_contents("php://input"), true);
+        if (!is_array($data)) $data = [];
         
         $id = !empty($data['id']) ? $data['id'] : uniqid('tgs_') . rand(100, 999);
         $pegawai_id = $data['pegawaiId'];
@@ -307,7 +310,34 @@ try {
         $mc = $data['mc'] ?? '';
         $poin_berkembang = $data['poinBerkembang'] ?? '';
 
-        // Fungsi konversi Base64 ke File
+        // Multipart adalah jalur baru; Base64 lama tetap dibaca untuk kompatibilitas.
+        $proses_uploads = function($field, $existing) {
+            $paths = array_values(array_filter(is_array($existing) ? $existing : [], function($v) { return is_string($v) && strpos($v, 'Uploads/') === 0; }));
+            $files = $_FILES[$field] ?? null;
+            if (!$files) return $paths;
+            $dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Uploads';
+            if (!is_dir($dir) && !mkdir($dir, 0755, true)) throw new Exception('Folder Uploads tidak dapat dibuat.');
+            if (!is_writable($dir)) throw new Exception('Folder Uploads tidak dapat ditulisi oleh server.');
+            $count = is_array($files['tmp_name'] ?? null) ? count($files['tmp_name']) : 0;
+            for ($i = 0; $i < $count; $i++) {
+                $upload_error = (int)($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+                if ($upload_error === UPLOAD_ERR_NO_FILE) continue;
+                if ($upload_error !== UPLOAD_ERR_OK) throw new Exception('Upload dokumentasi gagal atau melebihi batas server.');
+                $tmp = $files['tmp_name'][$i];
+                if (!is_uploaded_file($tmp)) throw new Exception('Upload file tidak valid.');
+                $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
+                $ext = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'][$mime] ?? null;
+                if ($ext === null || ($files['size'][$i] ?? 0) > 12 * 1024 * 1024) throw new Exception('Format dokumentasi ditolak.');
+                $relative = 'Uploads/doc_' . bin2hex(random_bytes(16)) . '.' . $ext;
+                $destination = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+                if (!move_uploaded_file($tmp, $destination)) throw new Exception('Dokumentasi gagal disimpan.');
+                @chmod($destination, 0644);
+                $paths[] = $relative;
+            }
+            return $paths;
+        };
+
+        // Fungsi konversi Base64 ke File (kompatibilitas klien lama).
         $proses_foto = function($input_arr) {
             $paths = [];
             foreach ($input_arr as $doc) {
@@ -331,8 +361,14 @@ try {
             return json_encode($paths);
         };
 
-        $dokumentasi_json = $proses_foto($data['dokumentasi'] ?? []);
-        $dokumentasi2_json = $proses_foto($data['dokumentasi2'] ?? []);
+        $dokumentasi_arr = $proses_uploads('dokumentasi', $data['dokumentasi'] ?? []);
+        $dokumentasi2_arr = $proses_uploads('dokumentasi2', $data['dokumentasi2'] ?? []);
+        $legacy_docs = array_filter($data['dokumentasi'] ?? [], 'is_string');
+        $legacy_docs2 = array_filter($data['dokumentasi2'] ?? [], 'is_string');
+        if (empty($_FILES['dokumentasi'])) $dokumentasi_arr = json_decode($proses_foto($legacy_docs), true) ?: [];
+        if (empty($_FILES['dokumentasi2'])) $dokumentasi2_arr = json_decode($proses_foto($legacy_docs2), true) ?: [];
+        $dokumentasi_json = json_encode($dokumentasi_arr);
+        $dokumentasi2_json = json_encode($dokumentasi2_arr);
 
         $cek = $conn->query("SELECT id, input_by, dokumentasi, dokumentasi2 FROM penugasan WHERE id = '$id'");
         

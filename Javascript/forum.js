@@ -230,73 +230,9 @@ window.sendSticker = async function(url) {
 }
 
 window.uploadStiker = async function(input) {
-    if (!input.files || input.files.length === 0) return;
-    const files = input.files;
-    
-    // 1. Cek ukuran semua file sebelum diproses
-    for (let i = 0; i < files.length; i++) {
-        if (files[i].size > 5 * 1024 * 1024) { 
-            alert(`Ukuran gambar "${files[i].name}" melebihi batas 5MB! Silakan pilih ulang.`); 
-            input.value = ""; return; 
-        }
-    }
-    
-    const grid = document.getElementById('stickerGrid');
-    const oldHtml = grid.innerHTML; const oldDisplay = grid.style.display;
-    grid.style.display = 'block';
-    
-    // Tampilkan indikator proses upload banyak stiker
-    grid.innerHTML = `<div style="text-align:center; padding:20px; font-size:12px; color:#64748b;"><span class="spinner"></span> ⏳ Mengunggah ${files.length} stiker...</div>`;
-    
-    let successCount = 0;
-
-    // 2. Loop upload secara berurutan (Sequential) untuk menghindari tabrakan data di Database
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = event => {
-                const img = new Image(); img.src = event.target.result;
-                img.onload = async () => {
-                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 400; 
-                    let width = img.width; let height = img.height;
-                    if (width > MAX_WIDTH) { height = Math.round(height * (MAX_WIDTH / width)); width = MAX_WIDTH; }
-                    canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    
-                    const base64 = canvas.toDataURL('image/webp', 0.8); 
-                    
-                    try {
-                        const res = await fetch('PHP/api_pegawai.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'tambah_stiker', id: loggedInUser.id, stiker_base64: base64 }) });
-                        const result = await res.json();
-                        
-                        if (result.status === 'success') {
-                            loggedInUser.stiker = result.stiker;
-                            sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-                            successCount++;
-                        }
-                    } catch (e) { console.error("Gagal mengunggah stiker tertentu:", e); }
-                    
-                    resolve(); // Lanjut ke gambar berikutnya
-                };
-            };
-        });
-    }
-    
-    // 3. Render ulang kotak stiker jika proses selesai
-    if (successCount > 0) {
-        updateAllStickerIcons();
-        window.isDeleteStickerMode = false;
-        const btn = document.getElementById('btnToggleHapusStiker');
-        if(btn) { btn.innerHTML = '🗑️ Hapus'; btn.style.background = '#e74c3c'; }
-        renderStickerGrid();
-    } else {
-        alert("Gagal mengunggah stiker."); 
-        grid.style.display = oldDisplay; grid.innerHTML = oldHtml;
-    }
-    
-    input.value = ""; // Kosongkan memori input
+    if(!input.files||!input.files.length)return;const files=input.files;const grid=document.getElementById('stickerGrid');let successCount=0;
+    for(let i=0;i<files.length;i++){const file=files[i];if(file.size>5*1024*1024)continue;try{const form=new FormData();form.append('action','tambah_stiker');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){loggedInUser.stiker=result.stiker;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));successCount++;}}catch(e){console.error(e);}}
+    if(successCount){updateAllStickerIcons();renderStickerGrid();}else if(grid)alert('Gagal mengunggah stiker.');input.value='';
 }
 
 window.hapusStiker = async function(url, event) {
@@ -752,7 +688,7 @@ window.renderFeed = function(posts) {
         let badgePost = window.getBadgeHTML ? window.getBadgeHTML(p.exp) : ''; 
         if (window.getRoleBadgeHTML) { badgePost += window.getRoleBadgeHTML(p.tingkat); }
         if (window.getCustomTagsHTML) { badgePost += window.getCustomTagsHTML(p.is_donatur, p.is_sangean); }
-        let pinBadgeHtml = ''; if (p.is_pinned == 1) { pinBadgeHtml = `<span style="background-color: #f59e0b; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">📌 Disematkan</span>`; }
+        let pinBadgeHtml = ''; if (p.is_pinned == 1) { pinBadgeHtml = `<span style="background-color: #f59e0b; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center;">📌 Disematkan</span>`; }
         
         let dropdownHtml = ''; let pinMenuHtml = '';
         if (loggedInUser.tingkat === 'God Creator') { 
@@ -845,69 +781,12 @@ window.renderFeed = function(posts) {
 }
 
 window.compressAndUploadImage = async function(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader(); 
-        reader.readAsDataURL(file);
-        reader.onload = event => {
-            const img = new Image(); 
-            img.src = event.target.result;
-            img.onload = async () => {
-                const canvas = document.createElement('canvas'); 
-                const MAX_WIDTH = 800; 
-                let width = img.width; let height = img.height;
-                if (width > MAX_WIDTH) { height = height * (MAX_WIDTH / width); width = MAX_WIDTH; }
-                canvas.width = width; canvas.height = height; 
-                const ctx = canvas.getContext('2d'); 
-                ctx.drawImage(img, 0, 0, width, height);
-                const outputType = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
-                const quality = (outputType === 'image/png') ? undefined : 0.8;
-                const base64 = canvas.toDataURL(outputType, quality);
-                
-                try {
-                    // Upload langsung ke server lokal (API Forum kita)
-                    const res = await fetch('PHP/api_forum.php', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'upload_gambar_base64', image: base64 }) 
-                    });
-                    const result = await res.json();
-                    if (result.status === 'success') {
-                        resolve(result.url); 
-                    } else reject(result.message);
-                } catch (e) { reject("Kesalahan jaringan"); }
-            };
-        };
-    });
+    const form=new FormData();form.append('action','upload_gambar_base64');form.append('file',file,file.name);const result=await(await fetch('PHP/api_forum.php',{method:'POST',body:form})).json();if(result.status!=='success')throw new Error(result.message||'Upload gagal');return result.url;
 }
 
 window.previewFiles = async function(input) {
-    const files = input.files; if (!files || files.length === 0) return;
-    if (uploadedFiles.length + files.length > 5) { alert("Maksimal 5 Foto!"); input.value = ""; return; }
-    
-    const mediaContainer = document.getElementById('mediaContainer'); const previewArea = document.getElementById('previewArea');
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i]; if (!file.type.startsWith('image/')) continue;
-        await new Promise((resolve) => {
-            const reader = new FileReader(); 
-            reader.onload = function(e) {
-                const img = new Image(); img.onload = function() {
-                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let width = img.width; let height = img.height;
-                    if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                    canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => {
-                        const namaFileBaru = file.name.replace(/\.[^/.]+$/, "") + "_kompres.jpg"; 
-                        const compressedFile = new File([blob], namaFileBaru, { type: 'image/jpeg' });
-                        uploadedFiles.push(compressedFile); 
-                        const fileUrl = URL.createObjectURL(compressedFile);
-                        const mediaElement = document.createElement('img'); mediaElement.src = fileUrl; mediaElement.className = 'media-item-preview'; 
-                        mediaElement.onclick = () => window.openMediaModal ? window.openMediaModal(fileUrl, 'image') : null; 
-                        mediaContainer.appendChild(mediaElement); resolve(); 
-                    }, 'image/jpeg', 0.7); 
-                }; img.src = e.target.result;
-            }; reader.readAsDataURL(file);
-        });
-    }
-    if (uploadedFiles.length > 0) previewArea.style.display = 'block'; input.value = ""; 
+    const files=input.files;if(!files||!files.length)return;if(uploadedFiles.length+files.length>5){alert('Maksimal 5 Foto!');input.value='';return;}const mediaContainer=document.getElementById('mediaContainer'),previewArea=document.getElementById('previewArea');
+    for(let i=0;i<files.length;i++){const file=files[i];if(!file.type.startsWith('image/'))continue;uploadedFiles.push(file);const img=document.createElement('img');img.src=URL.createObjectURL(file);img.className='media-item-preview';mediaContainer.appendChild(img);}if(uploadedFiles.length>0)previewArea.style.display='block';input.value='';
 }
 
 window.hapusMedia = function() { uploadedFiles = []; document.getElementById('mediaContainer').innerHTML = ''; document.getElementById('previewArea').style.display = 'none'; }
@@ -1041,9 +920,8 @@ window.simpanEditKomentar = async function(id) {
 }
 
 window.uploadImageKomentar = async function(input, postId) {
-    if (!input.files[0]) return; const btn = document.getElementById(`btn-komentar-${postId}`); const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true;
-    try { const url = await compressAndUploadImage(input.files[0]); const inputMsg = document.getElementById(`input-komentar-${postId}`); inputMsg.value = (inputMsg.value ? inputMsg.value + ' \n' : '') + url; inputMsg.focus(); } 
-    catch (e) { alert('Gagal mengunggah gambar.'); } finally { btn.innerText = oldText; btn.disabled = false; input.value = ''; }
+    if (!input.files[0]) return; const btn=document.getElementById(`btn-komentar-${postId}`); const oldText=btn.innerText; btn.innerText='⏳'; btn.disabled=true;
+    try { const form=new FormData(); form.append('action','buat_komentar'); form.append('post_id',postId); form.append('teks',document.getElementById(`input-komentar-${postId}`).value.trim()); form.append('media',input.files[0],input.files[0].name); const result=await(await fetch('PHP/api_forum.php',{method:'POST',body:form})).json(); if(result.status==='success'){if(window.location.href.includes('profile'))refreshProfileFeedKeepPosition();else refreshFeedKeepPosition();}else alert(result.message||'Gagal mengunggah gambar.'); } catch(e){alert('Gagal mengunggah gambar.');} finally{btn.innerText=oldText;btn.disabled=false;input.value='';}
 }
 
 // ==========================================
@@ -1144,14 +1022,8 @@ window.sendPrivateMessage = async function() {
 }
 
 window.uploadImageChat = async function(input) {
-    if (!input.files[0]) return; 
-    const btn = document.getElementById('btnSendChat'); 
-    const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true;
-    try { 
-        const url = await compressAndUploadImage(input.files[0]); 
-        const inputMsg = document.getElementById('chatInputMessage'); 
-        inputMsg.value = (inputMsg.value ? inputMsg.value + ' \n' : '') + url; inputMsg.focus(); 
-    } catch (e) { alert('Gagal mengunggah gambar.'); } finally { btn.innerText = oldText; btn.disabled = false; input.value = ''; }
+    if(!input.files[0]||!chatActiveTargetId)return; const btn=document.getElementById('btnSendChat');const oldText=btn.innerText;btn.innerText='⏳';btn.disabled=true;
+    try{const form=new FormData();form.append('action','send_chat');form.append('target_id',chatActiveTargetId);form.append('message',document.getElementById('chatInputMessage').value.trim());form.append('media',input.files[0],input.files[0].name);const result=await(await fetch('PHP/api_forum.php',{method:'POST',body:form})).json();if(result.status==='error')alert(result.message);else{lastMessagesData='';fetchPrivateChats();}}catch(e){alert('Gagal mengunggah gambar.');}finally{btn.innerText=oldText;btn.disabled=false;input.value='';}
 }
 
 window.currentSortForum = 'latest';
@@ -1775,44 +1647,9 @@ window.bukaOpsiStiker = function(event, imgElement, url) {
 
 // Logika gaib di balik layar untuk menyalin gambar orang lain menjadi milik kita
 window.simpanStikerOrangLain = async function(url) {
-    try {
-        // Konversi URL gambar menjadi Blob (data mentah)
-        const res = await fetch(url);
-        const blob = await res.blob();
-        
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = async function() {
-            const base64data = reader.result;
-            
-            // Tembakkan data tersebut ke server menggunakan API tambah_stiker yang sudah ada
-            const uploadRes = await fetch('PHP/api_pegawai.php', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ action: 'tambah_stiker', id: loggedInUser.id, stiker_base64: base64data }) 
-            });
-            const result = await uploadRes.json();
-            
-            if (result.status === 'success') {
-                loggedInUser.stiker = result.stiker;
-                sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-                
-                // Perbarui ikon stiker di seluruh layar (jika ikon stiker default berubah)
-                if (typeof updateAllStickerIcons === 'function') updateAllStickerIcons();
-                
-                if (typeof customAlertPopup === 'function') {
-                    customAlertPopup("Berhasil Disimpan", "Stiker baru telah ditambahkan ke koleksi Anda!", "🌟", "#3b82f6", "#eff6ff");
-                } else {
-                    alert("✅ Stiker berhasil ditambahkan ke koleksi Anda!");
-                }
-            } else {
-                alert("Gagal menambahkan stiker.");
-            }
-        }
-    } catch(e) {
-        alert("Terjadi kesalahan jaringan saat menyimpan stiker.");
-    }
+    try{const res=await fetch(url);const blob=await res.blob();const form=new FormData();form.append('action','tambah_stiker');form.append('file',new File([blob],'sticker.png',{type:blob.type||'image/png'}));const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){loggedInUser.stiker=result.stiker;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));updateAllStickerIcons();}else alert('Gagal menambahkan stiker.');}catch(e){alert('Terjadi kesalahan jaringan saat menyimpan stiker.');}
 }
+
 
 // ==========================================
 // PENJAGA TOMBOL STIKER CHAT GLOBAL

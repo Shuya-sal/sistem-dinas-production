@@ -763,34 +763,9 @@ window.loadLinkPreviews = async function() {
 }
 
 window.compressAndUploadImage = async function(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader(); 
-        reader.readAsDataURL(file);
-        reader.onload = event => {
-            const img = new Image(); 
-            img.src = event.target.result;
-            img.onload = async () => {
-                const canvas = document.createElement('canvas'); 
-                const MAX_WIDTH = 800; 
-                let width = img.width; let height = img.height;
-                if (width > MAX_WIDTH) { height = height * (MAX_WIDTH / width); width = MAX_WIDTH; }
-                canvas.width = width; canvas.height = height; 
-                const ctx = canvas.getContext('2d'); 
-                ctx.drawImage(img, 0, 0, width, height);
-                const base64 = canvas.toDataURL('image/jpeg', 0.8);
-                
-                try {
-                    const res = await fetch('PHP/api_forum.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'upload_gambar_base64', image: base64 }) });
-                    const result = await res.json();
-                    if (result.status === 'success') {
-                        // KODE PERBAIKAN: Berikan path relatif ("Uploads/...") tanpa menempelkan IP Server
-                        resolve(result.url);
-                    } else reject(result.message);
-                } catch (e) { reject(e); }
-            };
-        };
-    });
+    const form=new FormData();form.append('action','upload_gambar_base64');form.append('file',file,file.name);const result=await(await fetch('PHP/api_forum.php',{method:'POST',body:form})).json();if(result.status!=='success')throw new Error(result.message||'Upload gagal');return result.url;
 }
+
 
 // ==========================================
 // 6. WIDGET OBROLAN PRIVAT GLOBAL

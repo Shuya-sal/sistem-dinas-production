@@ -27,6 +27,28 @@ function employeeMediaUrlForum($employee_id, $media_type) {
     return 'PHP/api_pegawai.php?media=' . rawurlencode($media_type) . '&id=' . rawurlencode($employee_id);
 }
 
+function saveForumUpload($file, $prefix = 'img') {
+    if (!is_array($file)) return null;
+    $upload_error = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($upload_error === UPLOAD_ERR_NO_FILE) return null;
+    if ($upload_error !== UPLOAD_ERR_OK) throw new Exception('Upload file gagal atau melebihi batas server.');
+    if (($file['size'] ?? 0) <= 0 || ($file['size'] ?? 0) > 12 * 1024 * 1024) throw new Exception('Ukuran file tidak valid.');
+    $tmp = $file['tmp_name'] ?? '';
+    if (!is_uploaded_file($tmp)) throw new Exception('Upload file tidak valid.');
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
+    $ext = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'][$mime] ?? null;
+    if ($ext === null) throw new Exception('Format gambar ditolak.');
+    $dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Uploads';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) throw new Exception('Folder Uploads tidak dapat dibuat.');
+    @chmod($dir, 0755);
+    if (!is_writable($dir)) throw new Exception('Folder Uploads tidak dapat ditulisi oleh server.');
+    $relative = 'Uploads/' . $prefix . '_' . bin2hex(random_bytes(16)) . '.' . $ext;
+    $destination = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+    if (!move_uploaded_file($tmp, $destination)) throw new Exception('File gagal disimpan.');
+    @chmod($destination, 0644);
+    return $relative;
+}
+
 // Mencatat notifikasi forum per penerima berdasarkan nama lengkap pegawai.
 // Dipanggil setelah komentar tersimpan; kegagalan di sini tidak boleh
 // menggagalkan penyimpanan komentar.
@@ -319,6 +341,8 @@ try {
         if ($action == 'send_chat') {
             $my_id = $_SESSION['pegawai_id']; $target_id = $data['target_id'] ?? '';
             $message = htmlspecialchars(strip_tags($data['message'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $chat_file = saveForumUpload($_FILES['media'] ?? $_FILES['file'] ?? null, 'img');
+            if ($chat_file !== null) $message .= ($message !== '' ? ' ' : '') . $chat_file;
             
             $beri_exp = true;
             $cek_spam = $conn->query("SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) as jeda FROM private_chats WHERE sender_id = '$my_id' ORDER BY id DESC LIMIT 1");
@@ -624,17 +648,14 @@ try {
             
             if (!is_dir($upload_dir)) { mkdir($upload_dir, 0755, true); }
             
-            // Proses file foto lokal langsung ke folder Uploads/
+            // Proses file foto lokal dengan MIME tervalidasi dan nama acak.
             if (isset($_FILES['media'])) {
-                foreach ($_FILES['media']['tmp_name'] as $key => $tmp_name) {
-                    if ($_FILES['media']['error'][$key] === 0) {
-                        $ext = pathinfo($_FILES['media']['name'][$key], PATHINFO_EXTENSION);
-                        $file_name = 'img_' . time() . '_' . rand(100, 999) . '.' . $ext;
-                        $dest = $upload_dir . $file_name;
-                        if (move_uploaded_file($tmp_name, $dest)) {
-                            $media_paths[] = 'Uploads/' . $file_name;
-                        }
-                    }
+                $media_files = $_FILES['media'];
+                $media_count = is_array($media_files['tmp_name'] ?? null) ? count($media_files['tmp_name']) : 0;
+                for ($i = 0; $i < $media_count; $i++) {
+                    $single = ['error' => $media_files['error'][$i], 'size' => $media_files['size'][$i], 'tmp_name' => $media_files['tmp_name'][$i]];
+                    $saved = saveForumUpload($single, 'img');
+                    if ($saved !== null) $media_paths[] = $saved;
                 }
             }
             
@@ -662,6 +683,8 @@ try {
             // Pemilik komentar berasal dari session server.
             $pegawai_id = $_SESSION['pegawai_id'];
             $teks = htmlspecialchars(strip_tags($data['teks'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $comment_file = saveForumUpload($_FILES['media'] ?? $_FILES['file'] ?? null, 'img');
+            if ($comment_file !== null) $teks .= ($teks !== '' ? ' ' : '') . $comment_file;
             $tgl_komentar = date('Y-m-d H:i:s');
 
             $stmt = $conn->prepare("INSERT INTO forum_comments (id, post_id, pegawai_id, teks, tgl_komentar) VALUES (?, ?, ?, ?, ?)");
@@ -845,7 +868,13 @@ try {
             $stmt = $conn->prepare("UPDATE forum_comments SET teks = ? WHERE id = ?"); $stmt->bind_param("ss", $teks, $id); $stmt->execute();
             echo json_encode(["status" => "success"]); exit;
         }
-        elseif ($action == 'upload_gambar_base64') {
+        elseif ($action == 'upload_gambar' || $action == 'upload_gambar_base64') {
+            $multipart_file = $_FILES['file'] ?? $_FILES['image'] ?? null;
+            if ($multipart_file !== null) {
+                $saved = saveForumUpload($multipart_file, 'img');
+                echo json_encode(["status" => "success", "url" => $saved]);
+                exit;
+            }
             $base64 = trim((string)($data['image'] ?? ''));
             if ($base64 === '') {
                 echo json_encode(["status" => "error", "message" => "Gambar kosong."]); exit;

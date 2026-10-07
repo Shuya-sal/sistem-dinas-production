@@ -303,27 +303,8 @@ window.updateTopBarWidget = function(foto, frame) {
 }
 
 window.uploadProfilePic = async function(input) {
-    if (!input.files[0]) return; 
-    const file = input.files[0];
-    if (file.size > 10 * 1024 * 1024) { alert("Ukuran maksimal foto profil adalah 10MB!"); return; }
-    
-    const menu = document.getElementById('coverDropdown');
-    if(menu) menu.style.display = 'none';
-    
-    try {
-        const url = await compressAndUploadImage(file);
-        
-        const payload = { action: 'simpan', id: loggedInUser.id, nama: loggedInUser.nama, is_self_update: true, foto: url };
-        const res = await fetch('PHP/api_pegawai.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-        const result = await res.json();
-        
-        if (result.status === 'success') {
-            document.getElementById('profileAvatarImg').src = url;
-            updateTopBarWidget(url, loggedInUser.frame);
-            loggedInUser.foto = url; 
-            sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-        } else { alert("Gagal mengubah foto profil: " + result.message); }
-    } catch(e) { alert("Terjadi kesalahan saat memproses gambar."); } finally { input.value = ""; }
+    if(!input.files[0])return;const file=input.files[0];if(file.size>10*1024*1024){alert('Ukuran maksimal foto profil adalah 10MB!');return;}
+    try{const form=new FormData();form.append('action','simpan');form.append('is_self_update','true');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const url=result.foto||('PHP/api_pegawai.php?media=avatar&id='+loggedInUser.id);document.getElementById('profileAvatarImg').src=url;updateTopBarWidget(url,loggedInUser.frame);loggedInUser.foto=url;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengubah foto profil.');}catch(e){alert('Gagal mengunggah foto profil.');}finally{input.value='';}
 }
 
 window.hapusFotoProfil = async function() {
@@ -347,35 +328,8 @@ window.hapusFotoProfil = async function() {
 }
 
 window.uploadFrame = async function(input) {
-    if (!input.files[0]) return; 
-    const file = input.files[0];
-    if (file.size > 5 * 1024 * 1024) { alert("Ukuran maksimal bingkai adalah 5MB!"); return; }
-    
-    const menu = document.getElementById('coverDropdown');
-    if(menu) menu.style.display = 'none';
-    
-    const reader = new FileReader(); 
-    reader.readAsDataURL(file);
-    reader.onload = event => {
-        const img = new Image(); img.src = event.target.result;
-        img.onload = async () => {
-            const canvas = document.createElement('canvas'); const MAX_WIDTH = 600; let width = img.width; let height = img.height;
-            if (width > MAX_WIDTH) { height = Math.round(height * (MAX_WIDTH / width)); width = MAX_WIDTH; }
-            canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, width, height); ctx.drawImage(img, 0, 0, width, height);
-            
-            const base64 = canvas.toDataURL('image/png');
-            try {
-                const res = await fetch('PHP/api_pegawai.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'update_frame', id: loggedInUser.id, frame: base64 }) });
-                const result = await res.json();
-                
-                if (result.status === 'success') {
-                    const frameImg = document.getElementById('profileFrameImg'); frameImg.src = result.frame; frameImg.style.display = 'block';
-                    updateTopBarWidget(loggedInUser.foto, result.frame);
-                    loggedInUser.frame = result.frame; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-                }
-            } catch(e) {} finally { input.value = ""; }
-        }
-    }
+    if(!input.files[0])return;const file=input.files[0];if(file.size>5*1024*1024){alert('Ukuran maksimal bingkai adalah 5MB!');return;}
+    try{const form=new FormData();form.append('action','update_frame');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const frameImg=document.getElementById('profileFrameImg');frameImg.src=result.frame;frameImg.style.display='block';updateTopBarWidget(loggedInUser.foto,result.frame);loggedInUser.frame=result.frame;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengunggah bingkai.');}catch(e){alert('Gagal mengunggah bingkai.');}finally{input.value='';}
 }
 
 window.hapusFrame = async function() {
@@ -396,31 +350,8 @@ window.hapusFrame = async function() {
 }
 
 window.uploadCover = async function(input) {
-    if (!input.files[0]) return; const file = input.files[0];
-    if (file.size > 10 * 1024 * 1024) { alert("Ukuran maksimal sampul adalah 10MB!"); return; }
-    
-    const menu = document.getElementById('coverDropdown'); if(menu) menu.style.display = 'none';
-    
-    const reader = new FileReader(); reader.readAsDataURL(file);
-    reader.onload = event => {
-        const img = new Image(); img.src = event.target.result;
-        img.onload = async () => {
-            const canvas = document.createElement('canvas'); const MAX_WIDTH = 1200; let width = img.width; let height = img.height;
-            if (width > MAX_WIDTH) { height = Math.round(height * (MAX_WIDTH / width)); width = MAX_WIDTH; }
-            canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-            
-            const base64 = canvas.toDataURL('image/jpeg', 0.8);
-            try {
-                const res = await fetch('PHP/api_pegawai.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'update_cover', id: loggedInUser.id, cover: base64 }) });
-                const result = await res.json();
-                if (result.status === 'success') {
-                    const coverArea = document.getElementById('profileCoverArea');
-                    coverArea.style.background = `url('${result.cover}')`; coverArea.style.backgroundSize = 'cover'; coverArea.style.backgroundPosition = 'center'; coverArea.style.cursor = 'zoom-in'; coverArea.onclick = function(e) { if(e.target === this) openMediaModal(result.cover, 'image'); };
-                    loggedInUser.cover = result.cover; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-                }
-            } catch(e) {} finally { input.value = ""; }
-        }
-    }
+    if(!input.files[0])return;const file=input.files[0];if(file.size>10*1024*1024){alert('Ukuran maksimal sampul adalah 10MB!');return;}
+    try{const form=new FormData();form.append('action','update_cover');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const area=document.getElementById('profileCoverArea');area.style.background=`url('${result.cover}')`;area.style.backgroundSize='cover';area.style.backgroundPosition='center';loggedInUser.cover=result.cover;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengunggah sampul.');}catch(e){alert('Gagal mengunggah sampul.');}finally{input.value='';}
 }
 
 window.hapusCover = async function() {
@@ -441,30 +372,8 @@ window.hapusCover = async function() {
 }
 
 window.uploadBackground = async function(input) {
-    if (!input.files[0]) return; const file = input.files[0];
-    if (file.size > 10 * 1024 * 1024) { alert("Ukuran maksimal latar adalah 10MB!"); return; }
-    
-    const menu = document.getElementById('coverDropdown'); if(menu) menu.style.display = 'none';
-    
-    const reader = new FileReader(); reader.readAsDataURL(file);
-    reader.onload = event => {
-        const img = new Image(); img.src = event.target.result;
-        img.onload = async () => {
-            const canvas = document.createElement('canvas'); const MAX_WIDTH = 1920; let width = img.width; let height = img.height;
-            if (width > MAX_WIDTH) { height = Math.round(height * (MAX_WIDTH / width)); width = MAX_WIDTH; }
-            canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-            
-            const base64 = canvas.toDataURL('image/jpeg', 0.85);
-            try {
-                const res = await fetch('PHP/api_pegawai.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'update_background', id: loggedInUser.id, background_page: base64 }) });
-                const result = await res.json();
-                if (result.status === 'success') {
-                    loggedInUser.background_page = result.background_page; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-                    if (typeof applyGlobalBackground === 'function') applyGlobalBackground(result.background_page);
-                } else { alert("Gagal mengunggah latar: " + result.message); }
-            } catch(e) { alert("Terjadi kesalahan jaringan."); } finally { input.value = ""; }
-        }
-    }
+    if(!input.files[0])return;const file=input.files[0];if(file.size>10*1024*1024){alert('Ukuran maksimal latar adalah 10MB!');return;}
+    try{const form=new FormData();form.append('action','update_background');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){loggedInUser.background_page=result.background_page;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));if(typeof applyGlobalBackground==='function')applyGlobalBackground(result.background_page);}else alert(result.message||'Gagal mengunggah latar.');}catch(e){alert('Gagal mengunggah latar.');}finally{input.value='';}
 }
 
 window.hapusBackground = async function() {
