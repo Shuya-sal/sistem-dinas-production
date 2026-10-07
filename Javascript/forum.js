@@ -743,9 +743,12 @@ window.renderFeed = function(posts) {
         postCard.innerHTML = `
             <div class="post-header-top">
                 <div class="post-header">${avatarPembuat}
-                    <div>
-                        <span class="post-author"><a href="javascript:void(0)" onclick="navigasiSPA('profile.html?user=${encodeURIComponent(namaPembuatAsli)}')" class="link-profil" style="color:inherit; text-decoration:none;">${namaPembuatAsli}</a>${badgesPostHtml ? ' ' + badgesPostHtml : ''}</span>
-                        <span class="post-time" title="${p.tgl_posting}">${waktuPostRelatif}</span>
+                    <div class="post-author-box">
+                        <div class="post-author">
+                            <a href="javascript:void(0)" onclick="navigasiSPA('profile.html?user=${encodeURIComponent(namaPembuatAsli)}')" class="link-profil" style="color:inherit; text-decoration:none;">${namaPembuatAsli}</a>
+                            <span class="post-time" title="${p.tgl_posting}">${waktuPostRelatif}</span>
+                        </div>
+                        ${badgesPostHtml ? ' ' + badgesPostHtml : ''}
                     </div>
                 </div>${dropdownHtml}
             </div>
