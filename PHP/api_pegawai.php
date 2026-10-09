@@ -743,13 +743,19 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
             }
 
             if ($is_self_update) {
-                $id = $server_user_id;
-            } else {
-                if ($server_user_tingkat === 'Staf') {
-                    echo json_encode(["status" => "error", "message" => "Akses Ditolak! Anda tidak berhak mengedit data pegawai lain."]); exit;
-                }
-                $id = $data['id'];
-}
+                    $id = $server_user_id;
+                } else {
+                    if ($server_user_tingkat === 'Staf') {
+                        echo json_encode(["status" => "error", "message" => "Akses Ditolak! Anda tidak berhak mengedit data pegawai lain."]); exit;
+                    }
+                    // ID kosong atau "new" = tambah pegawai baru, generate ID server-side
+                    $id_from_frontend = trim($data['id'] ?? '');
+                    if ($id_from_frontend === '' || $id_from_frontend === 'new') {
+                        $id = uniqid('peg_', true) . rand(1000, 9999);
+                    } else {
+                        $id = $id_from_frontend;
+                    }
+            }
 
 // Upload profil dapat mengirim file saja; pertahankan field lama yang tidak dikirim.
             $current = [];

@@ -32,7 +32,13 @@ if ($method == 'GET') {
 elseif ($method == 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     
-    $id = $data['id'];
+    // ID kosong atau "new" = tambah tujuan baru, generate ID server-side
+    $id_from_frontend = trim($data['id'] ?? '');
+    if ($id_from_frontend === '' || $id_from_frontend === 'new') {
+        $id = uniqid('tuj_', true) . rand(1000, 9999);
+    } else {
+        $id = $id_from_frontend;
+    }
     $jenis = htmlspecialchars($data['jenis']);
     $nama = htmlspecialchars($data['nama']);
     $bunyi_berangkat = htmlspecialchars($data['bunyi_berangkat']);
