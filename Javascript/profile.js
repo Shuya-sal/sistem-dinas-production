@@ -304,7 +304,7 @@ window.updateTopBarWidget = function(foto, frame) {
 
 window.uploadProfilePic = async function(input) {
     if(!input.files[0])return;const file=input.files[0];if(file.size>10*1024*1024){alert('Ukuran maksimal foto profil adalah 10MB!');return;}
-    try{const form=new FormData();form.append('action','simpan');form.append('is_self_update','true');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const url=result.foto||('PHP/api_pegawai.php?media=avatar&id='+loggedInUser.id);document.getElementById('profileAvatarImg').src=url;updateTopBarWidget(url,loggedInUser.frame);loggedInUser.foto=url;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengubah foto profil.');}catch(e){alert('Gagal mengunggah foto profil.');}finally{input.value='';}
+    try{const form=new FormData();form.append('action','simpan');form.append('is_self_update','true');form.append('file',file,file.name);const response=await fetch('PHP/api_pegawai.php',{method:'POST',body:form});const result=await response.json();if(result.status==='success'){const url=result.foto||('PHP/api_pegawai.php?media=avatar&id='+loggedInUser.id);document.getElementById('profileAvatarImg').src=url;updateTopBarWidget(url,loggedInUser.frame);loggedInUser.foto=url;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else{console.error('Upload error:',result);alert(result.message||'Gagal mengubah foto profil.');}}catch(e){console.error('Upload exception:',e);alert('Gagal mengunggah foto profil: '+e.message);}finally{input.value='';}
 }
 
 window.hapusFotoProfil = async function() {
