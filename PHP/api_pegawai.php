@@ -748,8 +748,23 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
                     if ($server_user_tingkat === 'Staf') {
                         echo json_encode(["status" => "error", "message" => "Akses Ditolak! Anda tidak berhak mengedit data pegawai lain."]); exit;
                     }
-                    // ID kosong atau "new" = tambah pegawai baru, generate ID server-side
+                    // =========================================================
+                    // SATPAM EXTRA: Cegah admin overwrite akun dirinya sendiri.
+                    // Jika ID yang dikirim = ID session login, tolak dengan
+                    // hard exit. Ini blocker pamungkas untuk menutup semua
+                    // celah (browser cache, form auto-fill, request race
+                    // condition, dll.).
+                    // =========================================================
                     $id_from_frontend = trim($data['id'] ?? '');
+                    if ($id_from_frontend !== '' && $id_from_frontend !== 'new' && $id_from_frontend === $server_user_id) {
+                        echo json_encode([
+                            "status" => "error",
+                            "code" => "SELF_OVERWRITE_BLOCKED",
+                            "message" => "Ditolak! Anda tidak bisa menimpa akun Anda sendiri dari formulir pegawai. Silakan gunakan menu Profil untuk mengubah data akun Anda."
+                        ]);
+                        exit;
+                    }
+                    // ID kosong atau "new" = tambah pegawai baru, generate ID server-side
                     if ($id_from_frontend === '' || $id_from_frontend === 'new') {
                         $id = uniqid('peg_', true) . rand(1000, 9999);
                     } else {
