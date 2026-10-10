@@ -16,6 +16,16 @@ if (!isset($_SESSION['pegawai_id'])) {
 // Ambil Identitas Asli yang tidak bisa dimanipulasi Hacker
 $server_user_id = $_SESSION['pegawai_id'];
 $server_user_tingkat = $_SESSION['pegawai_tingkat'] ?? 'Staf';
+
+// DEBUG LOG: Catat semua request POST untuk tracking bug
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH', 'DELETE'])) {
+    $debug_data = $data ?? [];
+    $debug_id = $debug_data['id'] ?? 'N/A';
+    $debug_action = $debug_data['action'] ?? 'N/A';
+    $debug_path = dirname(__DIR__) . '/PHP/.debug.log';
+    $debug_msg = date('Y-m-d H:i:s') . " | SID:{$server_user_id} | ID:{$debug_id} | ACT:{$debug_action} | URI:{$_SERVER['REQUEST_URI']}\n";
+    @file_put_contents($debug_path, $debug_msg, FILE_APPEND | LOCK_EX);
+}
 // ==========================================
 
 function makeEmployeeMediaUrl($employee_id, $media_type) {

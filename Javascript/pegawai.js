@@ -63,7 +63,21 @@ window.initPegawaiSPA = function() {
     if(pegawaiForm) {
         pegawaiForm.onsubmit = async function(e) {
             e.preventDefault();
-            const idField = document.getElementById('editPegawaiId').value || '';
+
+            // =========================================================
+            // SATPAM FRONTEND: Cegah submit ID yang sama dengan akun sendiri
+            // Layer perlindungan TERAKHIR jika semua celah lain gagal.
+            // =========================================================
+            const myId = (loggedInUser && loggedInUser.id) ? String(loggedInUser.id) : null;
+            const submittedIdRaw = document.getElementById('editPegawaiId').value || '';
+            const submittedId = submittedIdRaw.trim();
+
+            if (myId && submittedId !== '' && submittedId !== 'new' && submittedId === myId) {
+                alert('\u26D4 DITOLAK! Anda tidak bisa menyimpan data ke akun Anda sendiri dari formulir pegawai.\n\nSilakan gunakan menu Profil untuk mengubah data akun Anda.');
+                return;
+            }
+
+            const idField = submittedIdRaw;
             const id = idField.trim() === '' ? 'new' : idField;
             const fotoFile = currentFotoFilePegawai;
             const idx = dbPegawai.findIndex(p => p.id === id); const fotoFinal = idx !== -1 ? dbPegawai[idx].foto : placeholderFotoPegawai;
@@ -85,7 +99,7 @@ window.initPegawaiSPA = function() {
                     }
                     resetFormPegawai(); fetchPegawai(currentPagePegawai); alert("Berhasil menyimpan data!");
                 } else { alert("Gagal menyimpan: " + result.message); }
-            } catch (error) {}
+            } catch (error) { alert("Terjadi kesalahan koneksi ke server. Silakan coba lagi."); }
         };
     }
     
