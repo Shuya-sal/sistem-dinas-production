@@ -737,52 +737,136 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
         if ($action === 'simpan' || !isset($data['action'])) {
             $is_self_update = !empty($data['is_self_update']);
 
-            // Hak akses ditentukan dari session server,
-            // bukan dari nilai yang dikirim browser.
-            $role_admin = ['God Creator', 'Super Admin'];
+            // =========================================================
+            // BRANCH A: SELF-UPDATE (mode profil)
+            // =========================================================
+            if ($is_self_update) {
+                $id = $server_user_id;
 
-            if (
-                !$is_self_update &&
-                !in_array($server_user_tingkat, $role_admin, true)
-            ) {
+                $nama = $data['nama'] ?? '';
+                $password_input = $data['password'] ?? '';
+                $foto = $data['foto'] ?? '';
+                $uploaded_foto = saveEmployeeUpload($_FILES['foto'] ?? $_FILES['file'] ?? null, 'pegawai', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+                if ($uploaded_foto !== null) { $foto = $uploaded_foto; }
+
+                $current_foto_stmt = $conn->prepare("SELECT foto FROM pegawai WHERE id = ? LIMIT 1");
+                $current_foto_stmt->bind_param("s", $id);
+                $current_foto_stmt->execute();
+                $current_foto_result = $current_foto_stmt->get_result();
+                $current_foto_row = $current_foto_result->fetch_assoc();
+                $current_foto_stmt->close();
+                $current_foto = $current_foto_row ? ($current_foto_row['foto'] ?? '') : '';
+
+                if (empty($foto)) { $foto = $current_foto; }
+
+                if (!empty($password_input)) {
+                    $password_final = password_hash($password_input, PASSWORD_DEFAULT);
+                    $stmt = $conn->prepare("UPDATE pegawai SET nama=?, password=?, foto=? WHERE id=?");
+                    $stmt->bind_param("ssss", $nama, $password_final, $foto, $id);
+                } else {
+                    $stmt = $conn->prepare("UPDATE pegawai SET nama=?, foto=? WHERE id=?");
+                    $stmt->bind_param("sss", $nama, $foto, $id);
+                }
+
+                if ($stmt->execute()) echo json_encode(["status" => "success", "foto" => $foto]);
+                else echo json_encode(["status" => "error", "message" => $stmt->error]);
+                $stmt->close();
+                exit;
+            }
+
+            // =========================================================
+            // BRANCH B: BUKAN SELF-UPDATE (form pegawai)
+            // Hak akses: God Creator dan Super Admin saja
+            // =========================================================
+            $role_admin = ['God Creator', 'Super Admin'];
+            if (!in_array($server_user_tingkat, $role_admin, true)) {
+                echo json_encode(["status" => "error", "message" => "Akses Ditolak! Anda tidak berhak mengakses formulir pegawai."]);
+                exit;
+            }
+
+            $id_from_frontend = trim($data['id'] ?? '');
+
+            // SATPAM KERAS: Tolak jika ID yang dikirim = ID session login
+            if ($id_from_frontend !== '' && $id_from_frontend !== 'new' && $id_from_frontend === $server_user_id) {
                 echo json_encode([
                     "status" => "error",
-                    "message" => "Akses Ditolak! Anda tidak berhak mengubah akun lain."
+                    "code" => "SELF_OVERWRITE_BLOCKED",
+                    "message" => "Ditolak! Anda tidak bisa menimpa akun Anda sendiri dari formulir pegawai. Gunakan menu Profil untuk mengubah data akun Anda."
                 ]);
                 exit;
             }
 
-            if ($is_self_update) {
-                    $id = $server_user_id;
+            // =========================================================
+            // BRANCH B1: TAMBAH PEGAWAI BARU (ID = empty atau "new")
+            // Generated ID baru, SELALU INSERT, TIDAK ADA UPDATE
+            // =========================================================
+            if ($id_from_frontend === '' || $id_from_frontend === 'new') {
+
+                $id = uniqid('peg_', true) . rand(1000, 9999);
+                $nama = $data['nama'] ?? '';
+                $nip = $data['nip'] ?? '';
+                $jabatan = $data['jabatan'] ?? '';
+                $pangkat = $data['pangkat'] ?? '';
+                $golongan = $data['golongan'] ?? '';
+                $bagian = $data['bagian'] ?? '';
+                $status = $data['status'] ?? '';
+                $password_input = $data['password'] ?? '';
+                $tingkat = $data['tingkat'] ?? 'Staf';
+                $nik = $data['nik'] ?? '';
+                $tempat_lahir = $data['tempat_lahir'] ?? '';
+                $tgl_lahir = $data['tgl_lahir'] ?? '';
+                $alamat = $data['alamat'] ?? '';
+                $foto = '';
+
+                // Handle foto upload
+                $uploaded_foto = saveEmployeeUpload($_FILES['foto'] ?? $_FILES['file'] ?? null, 'pegawai', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+                if ($uploaded_foto !== null) {
+                    $foto = $uploaded_foto;
+                } elseif (preg_match('/^data:image\/(\w+);base64,/', $data['foto'] ?? '', $type)) {
+                    $base64_data = substr($data['foto'], strpos($data['foto'], ',') + 1);
+                    $base64_data = str_replace(' ', '+', $base64_data);
+                    $decoded = base64_decode($base64_data, true);
+                    $finfo = new finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->buffer($decoded);
+                    if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
+                        $ext = explode('/', $mime)[1];
+                        if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
+                        $filename = 'Users/Image/pegawai_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+                        file_put_contents('../' . $filename, $decoded);
+                        $foto = $filename;
+                    }
+                }
+
+                $password_final = password_hash($password_input, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("INSERT INTO pegawai (id, nama, nip, jabatan, pangkat, golongan, bagian, status, password, tingkat, foto, nik, tempat_lahir, tgl_lahir, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssssssssssssss", $id, $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $password_final, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat);
+
+                if ($stmt->execute()) {
+                    echo json_encode(["status" => "success", "foto" => $foto, "new_id" => $id]);
                 } else {
-                    if ($server_user_tingkat === 'Staf') {
-                        echo json_encode(["status" => "error", "message" => "Akses Ditolak! Anda tidak berhak mengedit data pegawai lain."]); exit;
-                    }
-                    // =========================================================
-                    // SATPAM EXTRA: Cegah admin overwrite akun dirinya sendiri.
-                    // Jika ID yang dikirim = ID session login, tolak dengan
-                    // hard exit. Ini blocker pamungkas untuk menutup semua
-                    // celah (browser cache, form auto-fill, request race
-                    // condition, dll.).
-                    // =========================================================
-                    $id_from_frontend = trim($data['id'] ?? '');
-                    if ($id_from_frontend !== '' && $id_from_frontend !== 'new' && $id_from_frontend === $server_user_id) {
-                        echo json_encode([
-                            "status" => "error",
-                            "code" => "SELF_OVERWRITE_BLOCKED",
-                            "message" => "Ditolak! Anda tidak bisa menimpa akun Anda sendiri dari formulir pegawai. Silakan gunakan menu Profil untuk mengubah data akun Anda."
-                        ]);
-                        exit;
-                    }
-                    // ID kosong atau "new" = tambah pegawai baru, generate ID server-side
-                    if ($id_from_frontend === '' || $id_from_frontend === 'new') {
-                        $id = uniqid('peg_', true) . rand(1000, 9999);
-                    } else {
-                        $id = $id_from_frontend;
-                    }
+                    echo json_encode(["status" => "error", "message" => $stmt->error]);
+                }
+                $stmt->close();
+                exit;
             }
 
-// Upload profil dapat mengirim file saja; pertahankan field lama yang tidak dikirim.
+            // =========================================================
+            // BRANCH B2: EDIT PEGAWAI LAMA (ID = ID spesifik dari daftar)
+            // Pengecekan tambahan: ID ini BUKAN akun yang sedang login
+            // =========================================================
+            $id = $id_from_frontend;
+
+            // Double-check SATPAM: ID yang diedit JANGAN sama dengan session
+            if ($id === $server_user_id) {
+                echo json_encode([
+                    "status" => "error",
+                    "code" => "SELF_OVERWRITE_BLOCKED_EDIT",
+                    "message" => "Ditolak! Anda tidak bisa mengedit akun Anda sendiri dari halaman Data Pegawai. Gunakan menu Profil."
+                ]);
+                exit;
+            }
+
+            // Ambil data lama dari database untuk field yang tidak dikirim
             $current = [];
             $current_stmt = $conn->prepare("SELECT nama, nip, jabatan, pangkat, golongan, bagian, status, password, tingkat, foto, nik, tempat_lahir, tgl_lahir, alamat FROM pegawai WHERE id = ? LIMIT 1");
             $current_stmt->bind_param("s", $id);
@@ -791,77 +875,69 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
             if ($current_result && ($current_row = $current_result->fetch_assoc())) { $current = $current_row; }
             $current_stmt->close();
 
-            $nama = $data['nama'] ?? ($current['nama'] ?? '');
-            $nip = $data['nip'] ?? ($current['nip'] ?? '');
-            $jabatan = $data['jabatan'] ?? ($current['jabatan'] ?? '');
-            $pangkat = $data['pangkat'] ?? ($current['pangkat'] ?? '');
-            $golongan = $data['golongan'] ?? ($current['golongan'] ?? '');
-            $bagian = $data['bagian'] ?? ($current['bagian'] ?? '');
-            $status = $data['status'] ?? ($current['status'] ?? '');
+            // Jika ID tidak ditemukan di database, tolak (bukan pegawai valid)
+            if (empty($current)) {
+                echo json_encode(["status" => "error", "message" => "Data pegawai tidak ditemukan. ID tidak valid."]);
+                exit;
+            }
+
+            $nama = $data['nama'] ?? $current['nama'];
+            $nip = $data['nip'] ?? $current['nip'];
+            $jabatan = $data['jabatan'] ?? $current['jabatan'];
+            $pangkat = $data['pangkat'] ?? $current['pangkat'];
+            $golongan = $data['golongan'] ?? $current['golongan'];
+            $bagian = $data['bagian'] ?? $current['bagian'];
+            $status = $data['status'] ?? $current['status'];
             $password_input = $data['password'] ?? '';
-            $tingkat = $data['tingkat'] ?? ($current['tingkat'] ?? 'Staf');
-            $foto = array_key_exists('foto', $data) ? $data['foto'] : ($current['foto'] ?? '');
+            $tingkat = $data['tingkat'] ?? $current['tingkat'];
+            $nik = $data['nik'] ?? $current['nik'];
+            $tempat_lahir = $data['tempat_lahir'] ?? $current['tempat_lahir'];
+            $tgl_lahir = $data['tgl_lahir'] ?? $current['tgl_lahir'];
+            $alamat = $data['alamat'] ?? $current['alamat'];
+            $foto = array_key_exists('foto', $data) ? $data['foto'] : $current['foto'];
+
+            // Handle foto upload
             $uploaded_foto = saveEmployeeUpload($_FILES['foto'] ?? $_FILES['file'] ?? null, 'pegawai', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
             if ($uploaded_foto !== null) { $foto = $uploaded_foto; }
 
-            $nik = $data['nik'] ?? ($current['nik'] ?? '');
-            $tempat_lahir = $data['tempat_lahir'] ?? ($current['tempat_lahir'] ?? '');
-            $tgl_lahir = $data['tgl_lahir'] ?? ($current['tgl_lahir'] ?? '');
-            $alamat = $data['alamat'] ?? ($current['alamat'] ?? '');
-
             if ($uploaded_foto === null && preg_match('/^data:image\/(\w+);base64,/', $foto, $type)) {
-                $base64_data = substr($foto, strpos($foto, ',') + 1); $base64_data = str_replace(' ', '+', $base64_data);
-                $decoded = base64_decode($base64_data);
-                $finfo = new finfo(FILEINFO_MIME_TYPE); $mime = $finfo->buffer($decoded);
-
+                $base64_data = substr($foto, strpos($foto, ',') + 1);
+                $base64_data = str_replace(' ', '+', $base64_data);
+                $decoded = base64_decode($base64_data, true);
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime = $finfo->buffer($decoded);
                 if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-                    $ext = explode('/', $mime)[1]; if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
-                    $filename = 'Users/Image/pegawai_' . time() . '_' . rand(1000, 9999) . '.' . $ext; file_put_contents('../' . $filename, $decoded); $foto = $filename;
-                } else { echo json_encode(["status" => "error", "message" => "Format gambar ditolak karena alasan keamanan."]); exit; }
+                    $ext = explode('/', $mime)[1];
+                    if (!file_exists('../Users/Image')) { mkdir('../Users/Image', 0755, true); }
+                    $filename = 'Users/Image/pegawai_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+                    file_put_contents('../' . $filename, $decoded);
+                    $foto = $filename;
+                }
             }
 
-            $cek_stmt = $conn->prepare("SELECT id, foto FROM pegawai WHERE id = ?");
-$cek_stmt->bind_param("s", $id);
-$cek_stmt->execute();
-$cek = $cek_stmt->get_result();
-            if ($cek->num_rows > 0) {
-                $row_old = $cek->fetch_assoc();
-                $old_foto = $row_old['foto'];
-                if (!empty($old_foto) && $foto !== $old_foto && (strpos($old_foto, 'Users/Image/') === 0 || strpos($old_foto, 'Uploads/') === 0)) {
-                    $old_path = '../' . $old_foto; if (file_exists($old_path)) unlink($old_path);
-                }
+            // Hapus foto lama jika ganti
+            if (!empty($current['foto']) && $foto !== $current['foto'] && (strpos($current['foto'], 'Users/Image/') === 0 || strpos($current['foto'], 'Uploads/') === 0)) {
+                $old_path = '../' . $current['foto'];
+                if (file_exists($old_path)) unlink($old_path);
+            }
 
-                if ($is_self_update) {
-                    if (!empty($password_input)) {
-                        $password_final = password_hash($password_input, PASSWORD_DEFAULT);
-                        $stmt = $conn->prepare("UPDATE pegawai SET nama=?, password=?, foto=? WHERE id=?");
-                        $stmt->bind_param("ssss", $nama, $password_final, $foto, $id);
-                    } else {
-                        $stmt = $conn->prepare("UPDATE pegawai SET nama=?, foto=? WHERE id=?");
-                        $stmt->bind_param("sss", $nama, $foto, $id);
-                    }
-                } else {
-                    if (!empty($password_input)) {
-                        $password_final = password_hash($password_input, PASSWORD_DEFAULT);
-                        $stmt = $conn->prepare("UPDATE pegawai SET nama=?, nip=?, jabatan=?, pangkat=?, golongan=?, bagian=?, status=?, password=?, tingkat=?, foto=?, nik=?, tempat_lahir=?, tgl_lahir=?, alamat=? WHERE id=?");
-                        $stmt->bind_param("sssssssssssssss", $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $password_final, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat, $id);
-                    } else {
-                        $stmt = $conn->prepare("UPDATE pegawai SET nama=?, nip=?, jabatan=?, pangkat=?, golongan=?, bagian=?, status=?, tingkat=?, foto=?, nik=?, tempat_lahir=?, tgl_lahir=?, alamat=? WHERE id=?");
-                        $stmt->bind_param("ssssssssssssss", $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat, $id);
-                    }
-                }
-            } else {
-                if ($is_self_update) throw new Exception("Pengguna biasa tidak dapat membuat pegawai baru.");
+            if (!empty($password_input)) {
                 $password_final = password_hash($password_input, PASSWORD_DEFAULT);
-                $stmt = $conn->prepare("INSERT INTO pegawai (id, nama, nip, jabatan, pangkat, golongan, bagian, status, password, tingkat, foto, nik, tempat_lahir, tgl_lahir, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("sssssssssssssss", $id, $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $password_final, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat);
+                $stmt = $conn->prepare("UPDATE pegawai SET nama=?, nip=?, jabatan=?, pangkat=?, golongan=?, bagian=?, status=?, password=?, tingkat=?, foto=?, nik=?, tempat_lahir=?, tgl_lahir=?, alamat=? WHERE id=?");
+                $stmt->bind_param("sssssssssssssss", $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $password_final, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat, $id);
+            } else {
+                $stmt = $conn->prepare("UPDATE pegawai SET nama=?, nip=?, jabatan=?, pangkat=?, golongan=?, bagian=?, status=?, tingkat=?, foto=?, nik=?, tempat_lahir=?, tgl_lahir=?, alamat=? WHERE id=?");
+                $stmt->bind_param("ssssssssssssss", $nama, $nip, $jabatan, $pangkat, $golongan, $bagian, $status, $tingkat, $foto, $nik, $tempat_lahir, $tgl_lahir, $alamat, $id);
             }
 
             if ($stmt->execute()) echo json_encode(["status" => "success", "foto" => $foto]);
             else echo json_encode(["status" => "error", "message" => $stmt->error]);
+            $stmt->close();
             exit;
         }
         // ==========================================
+        // API VIP DONATUR (KHUSUS GOD CREATOR)
+        // ==========================================        // ==========================================
         // API VIP DONATUR (KHUSUS GOD CREATOR)
         // ==========================================
         if ($action == 'toggle_donatur') {

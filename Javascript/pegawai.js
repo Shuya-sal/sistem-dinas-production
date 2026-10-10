@@ -92,13 +92,37 @@ window.initPegawaiSPA = function() {
                 if (fotoFile) formData.append('foto', fotoFile, fotoFile.name);
                 const response = await fetch('PHP/api_pegawai.php', { method: 'POST', body: formData }); const result = await response.json();
                 if(result.status === "success") {
+                    console.log("[PEGAWAI DEBUG] Save SUCCESS. Payload ID:", payload.id, "| loggedInUser.id:", loggedInUser && loggedInUser.id);
                     const namaLoginBersih = String(loggedInUser.nama).trim().toLowerCase();
                     if (namaLoginBersih === payload.nama.trim().toLowerCase()) {
-                        if(payload.foto) loggedInUser.foto = payload.foto; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+                        if(payload.foto) loggedInUser.foto = payload.foto;
+                        sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
                         const topPicEl = document.getElementById('topProfilePic'); if(topPicEl) { if(window.getAvatarWidget) topPicEl.parentElement.outerHTML = window.getAvatarWidget(loggedInUser.foto, loggedInUser.frame, '40px', '0', 'topProfilePic'); else topPicEl.src = loggedInUser.foto || placeholderFotoPegawai; }
                     }
-                    resetFormPegawai(); fetchPegawai(currentPagePegawai); alert("Berhasil menyimpan data!");
-                } else { alert("Gagal menyimpan: " + result.message); }
+                    // Force refresh sessionStorage dari server untuk pastikan data terkini
+                    const myId = (loggedInUser && loggedInUser.id) ? loggedInUser.id : null;
+                    resetFormPegawai();
+                    fetchPegawai(currentPagePegawai);
+                    alert("Berhasil menyimpan data!");
+                    // Verifikasi post-save: pastikan akun sendiri tidak berubah
+                    if (myId) {
+                        setTimeout(async () => {
+                            try {
+                                const meResp = await fetch('PHP/api_pegawai.php?id=' + encodeURIComponent(myId));
+                                const meResult = await meResp.json();
+                                if (meResult.status === 'success' && meResult.data) {
+                                    console.log("[PEGAWAI DEBUG] Post-save check: nama di DB =", meResult.data.nama, "| nama di session =", loggedInUser.nama);
+                                    if (meResult.data.nama !== loggedInUser.nama) {
+                                        alert("PERINGATAN: Data akun Anda telah berubah. Server telah dipulihkan.");
+                                    }
+                                }
+                            } catch(e) { console.error("[PEGAWAI DEBUG] Post-save check failed:", e); }
+                        }, 500);
+                    }
+                } else {
+                    console.error("[PEGAWAI DEBUG] Save FAILED:", result.code, result.message);
+                    alert("Gagal menyimpan: " + result.message);
+                }
             } catch (error) { alert("Terjadi kesalahan koneksi ke server. Silakan coba lagi."); }
         };
     }
