@@ -63,7 +63,8 @@ window.initPegawaiSPA = function() {
     if(pegawaiForm) {
         pegawaiForm.onsubmit = async function(e) {
             e.preventDefault();
-            const id = document.getElementById('editPegawaiId').value || Date.now().toString();
+            const idField = document.getElementById('editPegawaiId').value || '';
+            const id = idField.trim() === '' ? 'new' : idField;
             const fotoFile = currentFotoFilePegawai;
             const idx = dbPegawai.findIndex(p => p.id === id); const fotoFinal = idx !== -1 ? dbPegawai[idx].foto : placeholderFotoPegawai;
 
