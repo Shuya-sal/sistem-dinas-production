@@ -465,7 +465,7 @@ window.initForumSPA = function() {
         feedBody.insertAdjacentHTML('beforebegin', toggleHtml);
     }
     
-    fetchPosts(true);
+    setTimeout(fetchPosts, 80, true);
 };
 
 window.onscroll = () => { 
