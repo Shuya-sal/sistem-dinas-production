@@ -42,3 +42,5 @@ backupcode_coding-high/
 # Test caches
 __pycache__/
 *.pyc
+*.tar.gz
+*.zip
