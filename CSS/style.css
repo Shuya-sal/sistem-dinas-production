@@ -580,9 +580,32 @@ td > .btn-edit:last-child, td > .btn-delete:last-child, td > .btn-action:last-ch
     h1 { font-size: 22px; margin-bottom: 20px; }
 
     /* 2. Top Bar & Profil Atas (Susun Ke Bawah) */
-    .top-bar { flex-direction: column; gap: 15px; padding: 15px; text-align: center; }
-    .user-info { flex-direction: column; justify-content: center; }
-    .top-profile-name { justify-content: center; text-align: center; }
+    .top-bar { flex-direction: column; gap: 12px; padding: 14px 12px; text-align: center; max-width: 100%; }
+    .user-info { flex-direction: column; justify-content: center; gap: 10px; max-width: 100%; min-width: 0; }
+    .user-info > div { max-width: 100%; min-width: 0; }
+    .user-info > div > div { flex-wrap: wrap !important; justify-content: center !important; max-width: 100%; }
+    /* Nama tetap di barisnya; LENCANA TURUN KE BAWAH bila mulai keluar layar */
+    .top-profile-name {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        white-space: normal;
+        gap: 6px;
+        max-width: 100%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.7;
+    }
+    .top-profile-name > a { white-space: normal; overflow-wrap: anywhere; }
+    .top-profile-name .badge-level,
+    .top-profile-name .badge-god,
+    .top-profile-name .badge-admin,
+    .top-profile-name .badge-pa,
+    .top-profile-name .badge-staf,
+    .top-profile-name .badge-vip-donatur,
+    .top-profile-name .badge-sangean { margin-left: 0 !important; max-width: 100%; }
 
     /* 3. Menu Navigasi (Jadikan Tombol Penuh Sebaris) */
     .nav-menu { gap: 8px; flex-direction: column; width: 100%; }
