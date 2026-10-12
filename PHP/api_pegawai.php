@@ -746,19 +746,26 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
             if ($is_self_update) {
                 $id = $server_user_id;
 
-                $nama = $data['nama'] ?? '';
+                // FIX: upload foto profil (profile.js) TIDAK mengirim field 'nama'.
+                // Tanpa fallback ini, $nama jadi string kosong -> nama user terhapus
+                // -> halaman profil "Pegawai tidak ditemukan".
+                // Ambil dulu data lama, lalu hanya timpa field yang benar-benar dikirim.
+                $cur_stmt = $conn->prepare("SELECT nama, foto FROM pegawai WHERE id = ? LIMIT 1");
+                $cur_stmt->bind_param("s", $id);
+                $cur_stmt->execute();
+                $cur_res = $cur_stmt->get_result();
+                $cur_row = $cur_res ? $cur_res->fetch_assoc() : null;
+                $cur_stmt->close();
+                $current_nama = $cur_row ? (string)($cur_row['nama'] ?? '') : '';
+                $current_foto = $cur_row ? (string)($cur_row['foto'] ?? '') : '';
+
+                $nama = trim((string)($data['nama'] ?? ''));
+                if ($nama === '') { $nama = $current_nama; }
+
                 $password_input = $data['password'] ?? '';
                 $foto = $data['foto'] ?? '';
                 $uploaded_foto = saveEmployeeUpload($_FILES['foto'] ?? $_FILES['file'] ?? null, 'pegawai', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
                 if ($uploaded_foto !== null) { $foto = $uploaded_foto; }
-
-                $current_foto_stmt = $conn->prepare("SELECT foto FROM pegawai WHERE id = ? LIMIT 1");
-                $current_foto_stmt->bind_param("s", $id);
-                $current_foto_stmt->execute();
-                $current_foto_result = $current_foto_stmt->get_result();
-                $current_foto_row = $current_foto_result->fetch_assoc();
-                $current_foto_stmt->close();
-                $current_foto = $current_foto_row ? ($current_foto_row['foto'] ?? '') : '';
 
                 if (empty($foto)) { $foto = $current_foto; }
 
