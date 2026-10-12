@@ -64,21 +64,16 @@ window.initPegawaiSPA = function() {
         pegawaiForm.onsubmit = async function(e) {
             e.preventDefault();
 
-            // =========================================================
-            // SATPAM FRONTEND: Cegah submit ID yang sama dengan akun sendiri
-            // Layer perlindungan TERAKHIR jika semua celah lain gagal.
-            // =========================================================
-            const myId = (loggedInUser && loggedInUser.id) ? String(loggedInUser.id) : null;
-            const submittedIdRaw = document.getElementById('editPegawaiId').value || '';
-            const submittedId = submittedIdRaw.trim();
-
-            if (myId && submittedId !== '' && submittedId !== 'new' && submittedId === myId) {
-                alert('\u26D4 DITOLAK! Anda tidak bisa menyimpan data ke akun Anda sendiri dari formulir pegawai.\n\nSilakan gunakan menu Profil untuk mengubah data akun Anda.');
-                return;
-            }
+            // === FIX: JANGAN blokir submit ke akun sendiri. ===
+            // Form ini MEMANG dipakai admin untuk memperbaiki datanya sendiri.
+            // Bahaya sebenarnya bukan "mengedit diri sendiri", tapi ID pegawai
+            // LAIN yang tertimpa / tertukar. Jadi kita hanya pakai ID yang
+            // benar-benar ada di field hidden, tanpa memblokir apa pun.
+            const submittedIdRaw = (document.getElementById('editPegawaiId').value || '').trim();
+            console.log("[PEGAWAI DEBUG] submit — editPegawaiId:", JSON.stringify(submittedIdRaw), "| loggedInUser.id:", loggedInUser && loggedInUser.id);
 
             const idField = submittedIdRaw;
-            const id = idField.trim() === '' ? 'new' : idField;
+            const id = submittedIdRaw === '' ? 'new' : submittedIdRaw;
             const fotoFile = currentFotoFilePegawai;
             const idx = dbPegawai.findIndex(p => p.id === id); const fotoFinal = idx !== -1 ? dbPegawai[idx].foto : placeholderFotoPegawai;
 

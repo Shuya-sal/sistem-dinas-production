@@ -735,7 +735,10 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
         // LOGIKA SIMPAN UTAMA (DATA PEGAWAI)
         // =========================================================
         if ($action === 'simpan' || !isset($data['action'])) {
-            $is_self_update = !empty($data['is_self_update']);
+            // FIX ROOT CAUSE: FormData mengirim string "false", dan !empty("false") === true.
+            // Akibatnya SEMUA simpan dari form pegawai salah dianggap self-update
+            // -> $id = $server_user_id -> UPDATE akun sendiri -> akun admin hilang.
+            $is_self_update = filter_var($data['is_self_update'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
             // =========================================================
             // BRANCH A: SELF-UPDATE (mode profil)
@@ -786,15 +789,7 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
 
             $id_from_frontend = trim($data['id'] ?? '');
 
-            // SATPAM KERAS: Tolak jika ID yang dikirim = ID session login
-            if ($id_from_frontend !== '' && $id_from_frontend !== 'new' && $id_from_frontend === $server_user_id) {
-                echo json_encode([
-                    "status" => "error",
-                    "code" => "SELF_OVERWRITE_BLOCKED",
-                    "message" => "Ditolak! Anda tidak bisa menimpa akun Anda sendiri dari formulir pegawai. Gunakan menu Profil untuk mengubah data akun Anda."
-                ]);
-                exit;
-            }
+            // (guard SELF_OVERWRITE_BLOCKED DIHAPUS: memblokir pemulihan akun sendiri)
 
             // =========================================================
             // BRANCH B1: TAMBAH PEGAWAI BARU (ID = empty atau "new")
@@ -856,15 +851,7 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
             // =========================================================
             $id = $id_from_frontend;
 
-            // Double-check SATPAM: ID yang diedit JANGAN sama dengan session
-            if ($id === $server_user_id) {
-                echo json_encode([
-                    "status" => "error",
-                    "code" => "SELF_OVERWRITE_BLOCKED_EDIT",
-                    "message" => "Ditolak! Anda tidak bisa mengedit akun Anda sendiri dari halaman Data Pegawai. Gunakan menu Profil."
-                ]);
-                exit;
-            }
+            // (guard SELF_OVERWRITE_BLOCKED_EDIT DIHAPUS: user berhak memperbaiki datanya sendiri)
 
             // Ambil data lama dari database untuk field yang tidak dikirim
             $current = [];
