@@ -814,9 +814,10 @@ window.loadLinkPreviews = async function() {
         document.head.appendChild(s);
     }
     var _overlay = null, _bar = null, _pct = null, _sub = null;
+    var _safetyTimer = null;
     window.uploadProgressShow = function(title) {
         _injectCSS();
-        if (_overlay) _overlay.remove();
+        window.uploadProgressHide();          // buang overlay lama + timer lama
         _overlay = document.createElement('div');
         _overlay.className = 'up-progress-overlay';
         _overlay.innerHTML = '<div class="up-progress-card"><div class="up-progress-title">' + (title || 'Mengunggah...') + '</div><div class="up-progress-pct" id="upProgPct">0%</div><div class="up-progress-bar-wrap"><div class="up-progress-bar" id="upProgBar"></div></div><div class="up-progress-sub" id="upProgSub">Memproses...</div></div>';
@@ -824,6 +825,9 @@ window.loadLinkPreviews = async function() {
         _bar = document.getElementById('upProgBar');
         _pct = document.getElementById('upProgPct');
         _sub = document.getElementById('upProgSub');
+        // JARING PENGAMAN: overlay TIDAK BOLEH memblokir UI selamanya.
+        if (_safetyTimer) clearTimeout(_safetyTimer);
+        _safetyTimer = setTimeout(function() { window.uploadProgressHide(); }, 120000);
     };
     window.uploadProgressSet = function(pct, sub) {
         if (!_bar) return;
@@ -839,7 +843,12 @@ window.loadLinkPreviews = async function() {
         setTimeout(function() { if (_overlay) { _overlay.remove(); _overlay = null; } }, success ? 1800 : 2800);
     };
     window.uploadProgressHide = function() {
-        if (_overlay) { _overlay.remove(); _overlay = null; }
+        if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
+        if (_overlay && _overlay.parentNode) { _overlay.parentNode.removeChild(_overlay); }
+        _overlay = null; _bar = null; _pct = null; _sub = null;
+        // bersihkan sisa overlay apa pun (jaga-jaga kalau ada duplikat)
+        var strays = document.querySelectorAll('.up-progress-overlay');
+        for (var i = 0; i < strays.length; i++) { strays[i].parentNode.removeChild(strays[i]); }
     };
 
     // Promise helper: upload FormData dgn progress bar, resolve dgn JSON hasil.
@@ -889,15 +898,17 @@ var isFetchingChats = false;
 
 window.toggleChatWindow = function() {
     const w = document.getElementById('chatWindow');
-    if (w.style.display === 'none') { w.style.display = 'flex'; if(!chatActiveTargetId) checkUnreadChatsUIOnly(); } 
+    if (!w) { console.warn('[Chat] widget obrolan tidak ada di halaman ini'); return; }
+    if (w.style.display === 'none') { w.style.display = 'flex'; if(!chatActiveTargetId) checkUnreadChatsUIOnly(); }
     else { w.style.display = 'none'; }
 }
 
 window.backToContacts = function() {
     chatActiveTargetId = null; lastMessagesData = "";
-    document.getElementById('searchChatContact').value = ''; currentSearchContactKeyword = '';
-    document.getElementById('chatConversationView').style.display = 'none'; 
-    document.getElementById('chatContactsView').style.display = 'flex';
+    var sc = document.getElementById('searchChatContact'); if (sc) sc.value = '';
+    currentSearchContactKeyword = '';
+    var cv = document.getElementById('chatConversationView'); if (cv) cv.style.display = 'none';
+    var cl = document.getElementById('chatContactsView'); if (cl) cl.style.display = 'flex';
     checkUnreadChatsUIOnly();
 }
 

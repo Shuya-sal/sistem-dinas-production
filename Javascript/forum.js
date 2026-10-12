@@ -1,46 +1,6 @@
 // =============================================================
 // UPLOAD PROGRESS BAR UTILITY
 // =============================================================
-(function() {
-    var _pStyleInjected = false;
-    function _injectCSS() {
-        if (_pStyleInjected) return;
-        _pStyleInjected = true;
-        var s = document.createElement('style');
-        s.id = 'sisdin-upload-progress-css';
-        s.textContent = "\n            .up-progress-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.55); backdrop-filter: blur(4px); z-index: 99998; display: flex; align-items: center; justify-content: center; }\n            .up-progress-card { background: white; border-radius: 16px; padding: 28px 32px; min-width: 320px; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); text-align: center; }\n            .up-progress-title { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }\n            .up-progress-bar-wrap { background: #e2e8f0; border-radius: 999px; height: 14px; overflow: hidden; margin-bottom: 10px; }\n            .up-progress-bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 999px; transition: width 0.15s ease; width: 0%; }\n            .up-progress-pct { font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 4px; }\n            .up-progress-sub { font-size: 12px; color: #94a3b8; }\n            .up-progress-check { font-size: 48px; margin-bottom: 12px; }\n        ";
-        document.head.appendChild(s);
-    }
-    var _overlay = null, _bar = null, _pct = null, _sub = null;
-    window.uploadProgressShow = function(title) {
-        _injectCSS();
-        if (_overlay) _overlay.remove();
-        _overlay = document.createElement('div');
-        _overlay.className = 'up-progress-overlay';
-        _overlay.innerHTML = '<div class="up-progress-card"><div class="up-progress-title" id="upProgTitle">' + (title || 'Mengunggah...') + '</div><div class="up-progress-pct" id="upProgPct">0%</div><div class="up-progress-bar-wrap"><div class="up-progress-bar" id="upProgBar"></div></div><div class="up-progress-sub" id="upProgSub">Memproses...</div></div>';
-        document.body.appendChild(_overlay);
-        _bar = document.getElementById('upProgBar');
-        _pct = document.getElementById('upProgPct');
-        _sub = document.getElementById('upProgSub');
-    };
-    window.uploadProgressSet = function(pct, sub) {
-        if (!_bar) return;
-        var v = Math.min(100, Math.max(0, Math.round(pct)));
-        _bar.style.width = v + '%';
-        _pct.textContent = v + '%';
-        if (sub !== undefined) _sub.textContent = sub;
-    };
-    window.uploadProgressDone = function(msg, success) {
-        if (!_overlay) return;
-        var card = _overlay.querySelector('.up-progress-card');
-        card.innerHTML = '<div class="up-progress-check">' + (success ? '✅' : '❌') + '</div><div class="up-progress-title">' + (success ? (msg || 'Berhasil!') : (msg || 'Gagal!')) + '</div>';
-        setTimeout(function() { if (_overlay) { _overlay.remove(); _overlay = null; } }, success ? 1800 : 2800);
-    };
-    window.uploadProgressHide = function() {
-        if (_overlay) { _overlay.remove(); _overlay = null; }
-    };
-})();
-
 var uploadedFiles = []; 
 var currentOffsetForum = 0;
 var postsLimitForum = 5;
