@@ -1,3 +1,68 @@
+
+// =============================================================
+// UPLOAD PROGRESS BAR UTILITY
+// =============================================================
+(function() {
+    var _pStyleInjected = false;
+    function _injectCSS() {
+        if (_pStyleInjected) return;
+        _pStyleInjected = true;
+        var s = document.createElement('style');
+        s.id = 'sisdin-upload-progress-css';
+        s.textContent = `
+            .up-progress-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.55); backdrop-filter: blur(4px); z-index: 99998; display: flex; align-items: center; justify-content: center; }
+            .up-progress-card { background: white; border-radius: 16px; padding: 28px 32px; min-width: 320px; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); text-align: center; }
+            .up-progress-title { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }
+            .up-progress-bar-wrap { background: #e2e8f0; border-radius: 999px; height: 14px; overflow: hidden; margin-bottom: 10px; }
+            .up-progress-bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 999px; transition: width 0.15s ease; width: 0%; }
+            .up-progress-pct { font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 4px; }
+            .up-progress-sub { font-size: 12px; color: #94a3b8; }
+            .up-progress-check { font-size: 48px; margin-bottom: 12px; }
+        `;
+        document.head.appendChild(s);
+    }
+
+    var _overlay = null, _bar = null, _pct = null, _sub = null;
+
+    window.uploadProgressShow = function(title) {
+        _injectCSS();
+        if (_overlay) _overlay.remove();
+        _overlay = document.createElement('div');
+        _overlay.className = 'up-progress-overlay';
+        _overlay.innerHTML = `<div class="up-progress-card">
+            <div class="up-progress-title" id="upProgTitle">${title || 'Mengunggah...'}</div>
+            <div class="up-progress-pct" id="upProgPct">0%</div>
+            <div class="up-progress-bar-wrap"><div class="up-progress-bar" id="upProgBar"></div></div>
+            <div class="up-progress-sub" id="upProgSub">Memproses...</div>
+        </div>`;
+        document.body.appendChild(_overlay);
+        _bar = document.getElementById('upProgBar');
+        _pct = document.getElementById('upProgPct');
+        _sub = document.getElementById('upProgSub');
+    };
+
+    window.uploadProgressSet = function(pct, sub) {
+        if (!_bar) return;
+        var v = Math.min(100, Math.max(0, Math.round(pct)));
+        _bar.style.width = v + '%';
+        _pct.textContent = v + '%';
+        if (sub !== undefined) _sub.textContent = sub;
+    };
+
+    window.uploadProgressDone = function(msg, success) {
+        if (!_overlay) return;
+        var card = _overlay.querySelector('.up-progress-card');
+        card.innerHTML = `<div class="up-progress-check">${success ? '✅' : '❌'}</div>
+            <div class="up-progress-title">${success ? (msg || 'Berhasil!') : (msg || 'Gagal!')}</div>`;
+        setTimeout(function() { if (_overlay) _overlay.remove(); _overlay = null; }, success ? 1800 : 2800);
+    };
+
+    window.uploadProgressHide = function() {
+        if (_overlay) { _overlay.remove(); _overlay = null; }
+    };
+})();
+
+
 var profilePosts = [];
 var currentUserObj = null;
 var currentOffsetProfile = 0;
@@ -322,52 +387,48 @@ window.updateTopBarWidget = function(foto, frame) {
     userInfo.innerHTML = avatarDiv + infoDiv;
 }
 
-window.uploadProfilePic = async function(input) {
+window.uploadProfilePic = function(input) {
     if (!input.files[0]) return;
     const file = input.files[0];
     if (file.size > 10 * 1024 * 1024) { alert('Ukuran maksimal foto profil adalah 10MB!'); return; }
-    try {
-        const form = new FormData();
-        form.append('action', 'simpan');
-        form.append('is_self_update', 'true');
-        form.append('file', file, file.name);
-        const response = await fetch('PHP/api_pegawai.php', { method: 'POST', body: form });
-        const result = await response.json();
-        if (result.status === 'success') {
-            // Backend sekarang mengirim URL media (bukan path). Tambah cache-buster agar
-            // tidak tersaji foto lama.
-            const base = result.foto || ('PHP/api_pegawai.php?media=avatar&id=' + encodeURIComponent(loggedInUser.id));
-            const url = base + (base.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
-
-            // 1. Update avatar di halaman profil (kalau ini halaman profil sendiri)
-            const profileAvatar = document.getElementById('profileAvatarImg');
-            if (profileAvatar) { profileAvatar.src = url; }
-
-            // 2. Update avatar di forum/posting (src pakai api_pegawai.php?media=...)
-            document.querySelectorAll('img[src*="api_pegawai.php?media=avatar"], img[src*="api_pegawai.php?media=media"]').forEach(function(img) {
-                img.src = url + (url.includes('?') ? '&' : '?') + 'r=' + Date.now();
-            });
-
-            // 3. Update top-bar via innerHTML (nama aman)
-            updateTopBarWidget(url, loggedInUser.frame);
-            if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
-
-            // 4. Update currentUserObj + session
-            if (typeof currentUserObj !== 'undefined' && currentUserObj && currentUserObj.id === loggedInUser.id) {
-                currentUserObj.foto = url;
+    const form = new FormData();
+    form.append('action', 'simpan');
+    form.append('is_self_update', 'true');
+    form.append('file', file, file.name);
+    uploadProgressShow('Mengunggah Foto Profil');
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) uploadProgressSet((e.loaded / e.total) * 100, Math.round(e.loaded/1024)+' / '+Math.round(e.total/1024)+' KB');
+    });
+    xhr.addEventListener('load', function() {
+        try {
+            const result = JSON.parse(xhr.responseText);
+            if (result.status === 'success') {
+                const base = result.foto || ('PHP/api_pegawai.php?media=avatar&id=' + encodeURIComponent(loggedInUser.id));
+                const url = base + (base.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
+                const profileAvatar = document.getElementById('profileAvatarImg');
+                if (profileAvatar) { profileAvatar.src = url; }
+                document.querySelectorAll('img[src*="api_pegawai.php?media=avatar"], img[src*="api_pegawai.php?media=media"]').forEach(function(img) {
+                    img.src = url + (url.includes('?') ? '&' : '?') + 'r=' + Date.now();
+                });
+                updateTopBarWidget(url, loggedInUser.frame);
+                if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
+                if (typeof currentUserObj !== 'undefined' && currentUserObj && currentUserObj.id === loggedInUser.id) {
+                    currentUserObj.foto = url;
+                }
+                loggedInUser.foto = url;
+                sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+                uploadProgressDone('Foto profil diperbarui!', true);
+            } else {
+                uploadProgressDone(result.message || 'Gagal mengubah foto profil.', false);
             }
-            loggedInUser.foto = url;
-            sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-        } else {
-            console.error('Upload error:', result);
-            alert(result.message || 'Gagal mengubah foto profil.');
-        }
-    } catch (e) {
-        console.error('Upload exception:', e);
-        alert('Gagal mengunggah foto profil: ' + e.message);
-    } finally {
-        input.value = '';
-    }
+        } catch(e) { uploadProgressDone('Respons server tidak valid.', false); }
+    });
+    xhr.addEventListener('error', function() { uploadProgressDone('Gagal koneksi ke server.', false); });
+    xhr.addEventListener('abort', function() { uploadProgressHide(); });
+    xhr.open('POST', 'PHP/api_pegawai.php');
+    xhr.send(form);
+    input.value = '';
 }
 
 window.hapusFotoProfil = async function() {
@@ -391,9 +452,36 @@ window.hapusFotoProfil = async function() {
     } catch(e) { alert("Terjadi kesalahan jaringan."); }
 }
 
-window.uploadFrame = async function(input) {
-    if(!input.files[0])return;const file=input.files[0];if(file.size>5*1024*1024){alert('Ukuran maksimal bingkai adalah 5MB!');return;}
-    try{const form=new FormData();form.append('action','update_frame');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const frameImg=document.getElementById('profileFrameImg');frameImg.src=result.frame;frameImg.style.display='block';const fUrl=result.frame+(result.frame.includes('?')?'&':'?')+'t='+Date.now();updateTopBarWidget(loggedInUser.foto||'Image/default.jpg',fUrl);if(typeof window.updateTopBarUI==='function'){window.updateTopBarUI();}loggedInUser.frame=result.frame;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengunggah bingkai.');}catch(e){alert('Gagal mengunggah bingkai.');}finally{input.value='';}
+window.uploadFrame = function(input) {
+    if(!input.files[0])return;
+    const file=input.files[0];
+    if(file.size>5*1024*1024){alert('Ukuran maksimal bingkai adalah 5MB!');return;}
+    const form=new FormData();
+    form.append('action','update_frame');
+    form.append('file',file,file.name);
+    uploadProgressShow('Mengunggah Bingkai Profil');
+    const xhr=new XMLHttpRequest();
+    xhr.upload.addEventListener('progress',function(e){if(e.lengthComputable)uploadProgressSet((e.loaded/e.total)*100,Math.round(e.loaded/1024)+' / '+Math.round(e.total/1024)+' KB');});
+    xhr.addEventListener('load',function(){
+        try{
+            const result=JSON.parse(xhr.responseText);
+            if(result.status==='success'){
+                const fUrl=result.frame+(result.frame.includes('?')?'&':'?')+'t='+Date.now();
+                const frameImg=document.getElementById('profileFrameImg');
+                if(frameImg){frameImg.src=result.frame;frameImg.style.display='block';}
+                updateTopBarWidget(loggedInUser.foto||'Image/default.jpg',fUrl);
+                if(typeof window.updateTopBarUI==='function'){window.updateTopBarUI();}
+                loggedInUser.frame=result.frame;
+                sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));
+                uploadProgressDone('Bingkai profil terpasang!',true);
+            }else{uploadProgressDone(result.message||'Gagal mengunggah bingkai.',false);}
+        }catch(e){uploadProgressDone('Respons server tidak valid.',false);}
+    });
+    xhr.addEventListener('error',function(){uploadProgressDone('Gagal koneksi ke server.',false);});
+    xhr.addEventListener('abort',function(){uploadProgressHide();});
+    xhr.open('POST','PHP/api_pegawai.php');
+    xhr.send(form);
+    input.value='';
 }
 
 window.hapusFrame = async function() {
@@ -415,9 +503,33 @@ window.hapusFrame = async function() {
     } catch(e) {}
 }
 
-window.uploadCover = async function(input) {
-    if(!input.files[0])return;const file=input.files[0];if(file.size>10*1024*1024){alert('Ukuran maksimal sampul adalah 10MB!');return;}
-    try{const form=new FormData();form.append('action','update_cover');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const area=document.getElementById('profileCoverArea');area.style.background=`url('${result.cover}')`;area.style.backgroundSize='cover';area.style.backgroundPosition='center';loggedInUser.cover=result.cover;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengunggah sampul.');}catch(e){alert('Gagal mengunggah sampul.');}finally{input.value='';}
+window.uploadCover = function(input) {
+    if(!input.files[0])return;
+    const file=input.files[0];
+    if(file.size>10*1024*1024){alert('Ukuran maksimal sampul adalah 10MB!');return;}
+    const form=new FormData();
+    form.append('action','update_cover');
+    form.append('file',file,file.name);
+    uploadProgressShow('Mengunggah Foto Sampul');
+    const xhr=new XMLHttpRequest();
+    xhr.upload.addEventListener('progress',function(e){if(e.lengthComputable)uploadProgressSet((e.loaded/e.total)*100,Math.round(e.loaded/1024)+' / '+Math.round(e.total/1024)+' KB');});
+    xhr.addEventListener('load',function(){
+        try{
+            const result=JSON.parse(xhr.responseText);
+            if(result.status==='success'){
+                const area=document.getElementById('profileCoverArea');
+                if(area){area.style.background='url('+result.cover+')';area.style.backgroundSize='cover';area.style.backgroundPosition='center';}
+                loggedInUser.cover=result.cover;
+                sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));
+                uploadProgressDone('Sampul profil diperbarui!',true);
+            }else{uploadProgressDone(result.message||'Gagal mengunggah sampul.',false);}
+        }catch(e){uploadProgressDone('Respons server tidak valid.',false);}
+    });
+    xhr.addEventListener('error',function(){uploadProgressDone('Gagal koneksi ke server.',false);});
+    xhr.addEventListener('abort',function(){uploadProgressHide();});
+    xhr.open('POST','PHP/api_pegawai.php');
+    xhr.send(form);
+    input.value='';
 }
 
 window.hapusCover = async function() {
@@ -437,9 +549,32 @@ window.hapusCover = async function() {
     } catch(e) {}
 }
 
-window.uploadBackground = async function(input) {
-    if(!input.files[0])return;const file=input.files[0];if(file.size>10*1024*1024){alert('Ukuran maksimal latar adalah 10MB!');return;}
-    try{const form=new FormData();form.append('action','update_background');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){loggedInUser.background_page=result.background_page;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));if(typeof applyGlobalBackground==='function')applyGlobalBackground(result.background_page);}else alert(result.message||'Gagal mengunggah latar.');}catch(e){alert('Gagal mengunggah latar.');}finally{input.value='';}
+window.uploadBackground = function(input) {
+    if(!input.files[0])return;
+    const file=input.files[0];
+    if(file.size>10*1024*1024){alert('Ukuran maksimal latar adalah 10MB!');return;}
+    const form=new FormData();
+    form.append('action','update_background');
+    form.append('file',file,file.name);
+    uploadProgressShow('Mengunggah Latar Halaman');
+    const xhr=new XMLHttpRequest();
+    xhr.upload.addEventListener('progress',function(e){if(e.lengthComputable)uploadProgressSet((e.loaded/e.total)*100,Math.round(e.loaded/1024)+' / '+Math.round(e.total/1024)+' KB');});
+    xhr.addEventListener('load',function(){
+        try{
+            const result=JSON.parse(xhr.responseText);
+            if(result.status==='success'){
+                loggedInUser.background_page=result.background_page;
+                sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));
+                if(typeof applyGlobalBackground==='function')applyGlobalBackground(result.background_page);
+                uploadProgressDone('Latar halaman diperbarui!',true);
+            }else{uploadProgressDone(result.message||'Gagal mengunggah latar.',false);}
+        }catch(e){uploadProgressDone('Respons server tidak valid.',false);}
+    });
+    xhr.addEventListener('error',function(){uploadProgressDone('Gagal koneksi ke server.',false);});
+    xhr.addEventListener('abort',function(){uploadProgressHide();});
+    xhr.open('POST','PHP/api_pegawai.php');
+    xhr.send(form);
+    input.value='';
 }
 
 window.hapusBackground = async function() {
