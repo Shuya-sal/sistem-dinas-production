@@ -92,7 +92,7 @@ window.initPegawaiSPA = function() {
                     if (namaLoginBersih === payload.nama.trim().toLowerCase()) {
                         if(payload.foto) loggedInUser.foto = payload.foto;
                         sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
-                        const topPicEl = document.getElementById('topProfilePic'); if(topPicEl) { if(window.getAvatarWidget) topPicEl.parentElement.outerHTML = window.getAvatarWidget(loggedInUser.foto, loggedInUser.frame, '40px', '0', 'topProfilePic'); else topPicEl.src = loggedInUser.foto || placeholderFotoPegawai; }
+                        const topPicEl = document.getElementById('topProfilePic'); if(topPicEl) { if(window.getAvatarWidget) { if (topPicEl.id === 'topProfilePic') { topPicEl.outerHTML = window.getAvatarWidget(loggedInUser.foto, loggedInUser.frame, '40px', '0', 'topProfilePic'); } else { const realTopPic = document.getElementById('topProfilePic'); if (realTopPic) realTopPic.outerHTML = window.getAvatarWidget(loggedInUser.foto, loggedInUser.frame, '40px', '0', 'topProfilePic'); } } else topPicEl.src = loggedInUser.foto || placeholderFotoPegawai; }
                     }
                     // Force refresh sessionStorage dari server untuk pastikan data terkini
                     const myId = (loggedInUser && loggedInUser.id) ? loggedInUser.id : null;

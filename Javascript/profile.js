@@ -296,15 +296,78 @@ window.toggleCoverMenu = function(event) {
 }
 
 window.updateTopBarWidget = function(foto, frame) {
-    const topPicEl = document.getElementById('topProfilePic');
-    if (topPicEl && window.getAvatarWidget) {
-        topPicEl.parentElement.outerHTML = window.getAvatarWidget(foto, frame, '40px', '0', 'topProfilePic');
-    }
+    // cari .user-info (blok foto+nama+status) — GANTI HANYA FOTO, nama TIDAK hilang
+    const userInfo = document.querySelector('.user-info');
+    if (!userInfo) return;
+    // Bangun HTML baru: foto avatar + info (nama+role+online) di sebelah
+    const nameEl = document.getElementById('topProfileName');
+    const roleEl = document.getElementById('topProfileRole');
+    const onlineEl = document.getElementById('onlineCountText');
+    const nameHtml = nameEl ? nameEl.innerHTML : '';
+    const roleStyle = roleEl ? roleEl.getAttribute('style') || '' : '';
+    const onlineText = onlineEl ? onlineEl.textContent : 'Sedang aktif';
+    // info div: nama + role badge + online dot
+    const infoDiv = `<div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div id="topProfileName" class="top-profile-name">${nameHtml}</div>
+            <span id="topProfileRole" ${roleStyle ? `style="${roleStyle}"` : ''}></span>
+        </div>
+        <div style="font-size:11px;color:#27ae60;margin-top:2px;font-weight:bold;display:flex;align-items:center;">
+            <span class="online-dot"></span> <span id="onlineCountText">${onlineText}</span>
+        </div>
+    </div>`;
+    // avatar div
+    const avatarDiv = window.getAvatarWidget ? window.getAvatarWidget(foto, frame, '40px', '0', 'topProfilePic') : '';
+    // assemble: .user-info = avatarHtml + infoHtml
+    userInfo.innerHTML = avatarDiv + infoDiv;
 }
 
 window.uploadProfilePic = async function(input) {
-    if(!input.files[0])return;const file=input.files[0];if(file.size>10*1024*1024){alert('Ukuran maksimal foto profil adalah 10MB!');return;}
-    try{const form=new FormData();form.append('action','simpan');form.append('is_self_update','true');form.append('file',file,file.name);const response=await fetch('PHP/api_pegawai.php',{method:'POST',body:form});const result=await response.json();if(result.status==='success'){const url=result.foto||('PHP/api_pegawai.php?media=avatar&id='+loggedInUser.id);document.getElementById('profileAvatarImg').src=url;updateTopBarWidget(url,loggedInUser.frame);loggedInUser.foto=url;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else{console.error('Upload error:',result);alert(result.message||'Gagal mengubah foto profil.');}}catch(e){console.error('Upload exception:',e);alert('Gagal mengunggah foto profil: '+e.message);}finally{input.value='';}
+    if (!input.files[0]) return;
+    const file = input.files[0];
+    if (file.size > 10 * 1024 * 1024) { alert('Ukuran maksimal foto profil adalah 10MB!'); return; }
+    try {
+        const form = new FormData();
+        form.append('action', 'simpan');
+        form.append('is_self_update', 'true');
+        form.append('file', file, file.name);
+        const response = await fetch('PHP/api_pegawai.php', { method: 'POST', body: form });
+        const result = await response.json();
+        if (result.status === 'success') {
+            // Backend sekarang mengirim URL media (bukan path). Tambah cache-buster agar
+            // tidak tersaji foto lama.
+            const base = result.foto || ('PHP/api_pegawai.php?media=avatar&id=' + encodeURIComponent(loggedInUser.id));
+            const url = base + (base.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
+
+            // 1. Update avatar di halaman profil (kalau ini halaman profil sendiri)
+            const profileAvatar = document.getElementById('profileAvatarImg');
+            if (profileAvatar) { profileAvatar.src = url; }
+
+            // 2. Update avatar di forum/posting (src pakai api_pegawai.php?media=...)
+            document.querySelectorAll('img[src*="api_pegawai.php?media=avatar"], img[src*="api_pegawai.php?media=media"]').forEach(function(img) {
+                img.src = url + (url.includes('?') ? '&' : '?') + 'r=' + Date.now();
+            });
+
+            // 3. Update top-bar via innerHTML (nama aman)
+            updateTopBarWidget(url, loggedInUser.frame);
+            if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
+
+            // 4. Update currentUserObj + session
+            if (typeof currentUserObj !== 'undefined' && currentUserObj && currentUserObj.id === loggedInUser.id) {
+                currentUserObj.foto = url;
+            }
+            loggedInUser.foto = url;
+            sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+        } else {
+            console.error('Upload error:', result);
+            alert(result.message || 'Gagal mengubah foto profil.');
+        }
+    } catch (e) {
+        console.error('Upload exception:', e);
+        alert('Gagal mengunggah foto profil: ' + e.message);
+    } finally {
+        input.value = '';
+    }
 }
 
 window.hapusFotoProfil = async function() {
@@ -321,7 +384,8 @@ window.hapusFotoProfil = async function() {
         if (result.status === 'success') {
             const avatarImg = document.getElementById('profileAvatarImg');
             avatarImg.src = 'Image/default.jpg'; avatarImg.style.cursor = 'default'; avatarImg.onclick = null;
-            updateTopBarWidget('', loggedInUser.frame);
+            updateTopBarWidget('', '');
+            if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
             loggedInUser.foto = ''; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
         } else { alert("Gagal menghapus foto profil: " + result.message); }
     } catch(e) { alert("Terjadi kesalahan jaringan."); }
@@ -329,7 +393,7 @@ window.hapusFotoProfil = async function() {
 
 window.uploadFrame = async function(input) {
     if(!input.files[0])return;const file=input.files[0];if(file.size>5*1024*1024){alert('Ukuran maksimal bingkai adalah 5MB!');return;}
-    try{const form=new FormData();form.append('action','update_frame');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const frameImg=document.getElementById('profileFrameImg');frameImg.src=result.frame;frameImg.style.display='block';updateTopBarWidget(loggedInUser.foto,result.frame);loggedInUser.frame=result.frame;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengunggah bingkai.');}catch(e){alert('Gagal mengunggah bingkai.');}finally{input.value='';}
+    try{const form=new FormData();form.append('action','update_frame');form.append('file',file,file.name);const result=await(await fetch('PHP/api_pegawai.php',{method:'POST',body:form})).json();if(result.status==='success'){const frameImg=document.getElementById('profileFrameImg');frameImg.src=result.frame;frameImg.style.display='block';const fUrl=result.frame+(result.frame.includes('?')?'&':'?')+'t='+Date.now();updateTopBarWidget(loggedInUser.foto||'Image/default.jpg',fUrl);if(typeof window.updateTopBarUI==='function'){window.updateTopBarUI();}loggedInUser.frame=result.frame;sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));}else alert(result.message||'Gagal mengunggah bingkai.');}catch(e){alert('Gagal mengunggah bingkai.');}finally{input.value='';}
 }
 
 window.hapusFrame = async function() {
@@ -343,7 +407,9 @@ window.hapusFrame = async function() {
         const result = await res.json();
         if (result.status === 'success') {
             const frameImg = document.getElementById('profileFrameImg'); frameImg.src = ''; frameImg.style.display = 'none';
-            updateTopBarWidget(loggedInUser.foto, '');
+            updateTopBarWidget(loggedInUser.foto || '', '');
+            if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
+            const hFrame = document.getElementById('profileFrameImg'); if(hFrame){ hFrame.src=''; hFrame.style.display='none'; }
             loggedInUser.frame = ''; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
         }
     } catch(e) {}

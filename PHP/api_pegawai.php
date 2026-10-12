@@ -130,8 +130,17 @@ try {
                 $image_mime = 'image/jpeg';
             }
 
+            // FIX: URL media selalu sama walau fotonya diganti, sehingga browser
+            // menyajikan gambar LAMA dari cache (max-age=3600). Gunakan ETag +
+            // no-cache: browser selalu revalidasi, jika foto berubah -> gambar baru.
+            $media_etag = '"' . md5($image_bytes) . '"';
+            header('ETag: ' . $media_etag);
+            header('Cache-Control: private, no-cache, must-revalidate');
+            if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && trim((string)$_SERVER['HTTP_IF_NONE_MATCH']) === $media_etag) {
+                http_response_code(304);
+                exit;
+            }
             header('Content-Type: ' . $image_mime);
-            header('Cache-Control: private, max-age=3600');
             header('X-Content-Type-Options: nosniff');
             header('Content-Length: ' . strlen($image_bytes));
             echo $image_bytes;
@@ -778,7 +787,10 @@ $cek_stmt = $conn->prepare("SELECT id FROM pegawai WHERE (nip = ? AND nip != '')
                     $stmt->bind_param("sss", $nama, $foto, $id);
                 }
 
-                if ($stmt->execute()) echo json_encode(["status" => "success", "foto" => $foto]);
+                // FIX: kirim URL media (bukan path file mentah) supaya frontend bisa
+                // langsung memakai sebagai src gambar.
+                $foto_url_out = ($foto !== '') ? makeEmployeeMediaUrl($id, 'avatar') : '';
+                if ($stmt->execute()) echo json_encode(["status" => "success", "foto" => $foto_url_out]);
                 else echo json_encode(["status" => "error", "message" => $stmt->error]);
                 $stmt->close();
                 exit;
