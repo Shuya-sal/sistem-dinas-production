@@ -4,20 +4,19 @@
     window.XMLHttpRequest = function() {
         var xhr = new OriginalXHR();
         var originalOpen = xhr.open.bind(xhr);
+        var originalSend = xhr.send.bind(xhr); // CAPTURE SEBELUM override — bugfix
         var csrfMethods = {POST:1, PUT:1, PATCH:1, DELETE:1};
         xhr.open = function(method, url, async, user, pass) {
-            var self = this;
-            var originalSend = this.send.bind(this);
-            this.send = function(data) {
-                var isMutation = !!csrfMethods[String(method).toUpperCase()];
-                var isApi = (typeof url === 'string') && (url.includes('/PHP/') || url.startsWith('PHP/'));
+            var isMutation = !!csrfMethods[String(method).toUpperCase()];
+            var isApi = (typeof url === 'string') && (url.includes('/PHP/') || url.startsWith('PHP/'));
+            xhr.send = function(data) {
                 if (isMutation && isApi) {
                     var token = sessionStorage.getItem('csrf_token');
                     if (!token) {
                         var m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
                         if (m) { token = decodeURIComponent(m[1]); }
                     }
-                    if (token) { self.setRequestHeader('X-CSRF-Token', token); }
+                    if (token) { xhr.setRequestHeader('X-CSRF-Token', token); }
                 }
                 return originalSend(data);
             };
