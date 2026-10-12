@@ -1,19 +1,3 @@
-                // Gunakan XHR agar bisa tampilkan progress upload multi-media
-                const response = await new Promise(function(resolve, reject) {
-                    var xhr = new XMLHttpRequest();
-                    xhr.upload.addEventListener('progress', function(e) {
-                        if (e.lengthComputable) {
-                            uploadProgressShow('Mengunggah Post + Media');
-                            uploadProgressSet((e.loaded / e.total) * 100, Math.round(e.loaded/1024)+' / '+Math.round(e.total/1024)+' KB');
-                        }
-                    });
-                    xhr.addEventListener('load', function() {
-                        resolve({ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, json: function() { return Promise.resolve(JSON.parse(xhr.responseText)); }});
-                    });
-                    xhr.addEventListener('error', function() { reject(new Error('Gagal koneksi ke server.')); });
-                    xhr.open('POST', 'PHP/api_forum.php');
-                    xhr.send(formData);
-                });
 // =============================================================
 // UPLOAD PROGRESS BAR UTILITY
 // =============================================================
@@ -492,10 +476,13 @@ window.refreshFeedKeepPosition = async function() {
 
 window.fetchPosts = async function(reset = false) {
     if (isFetchingDataForum || (!hasMorePostsForum && !reset)) return;
+    const feedBodyEl = document.getElementById('feedBody');
+    if (!feedBodyEl) return; // halaman bukan forum / DOM belum siap
     isFetchingDataForum = true; 
-    if (reset) { currentOffsetForum = 0; hasMorePostsForum = true; document.getElementById('feedBody').innerHTML = ''; }
+    if (reset) { currentOffsetForum = 0; hasMorePostsForum = true; feedBodyEl.innerHTML = ''; }
     
-    document.getElementById('loadingScroll').style.display = 'block';
+    const loadingEl = document.getElementById('loadingScroll');
+    if (loadingEl) loadingEl.style.display = 'block';
     try {
        const sortType = window.currentSortForum || 'latest';
         const activeHashtag = window.currentHashtagFilter || '';
@@ -506,8 +493,14 @@ window.fetchPosts = async function(reset = false) {
             if (reset && dataPost.length === 0) { document.getElementById('feedBody').innerHTML = '<div style="text-align: center; color: #7f8c8d; padding: 20px;">Belum ada postingan. Jadilah yang pertama!</div>'; } 
             else { renderFeed(dataPost); currentOffsetForum += dataPost.length; }
         }
-    } catch (error) { } finally {
-        isFetchingDataForum = false; document.getElementById('loadingScroll').style.display = 'none';
+    } catch (error) {
+        console.error('[Forum] Gagal memuat postingan:', error);
+        if (feedBodyEl && !feedBodyEl.children.length) {
+            feedBodyEl.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px;">Gagal memuat postingan. Periksa koneksi lalu muat ulang halaman.</div>';
+        }
+    } finally {
+        isFetchingDataForum = false;
+        if (loadingEl) loadingEl.style.display = 'none';
         if (!hasMorePostsForum && currentOffsetForum > 0) { 
             if (!document.getElementById('endOfFeedMessage')) { 
                 const endMsg = document.createElement('div'); endMsg.id = 'endOfFeedMessage'; endMsg.style.cssText = "text-align: center; color: #95a5a6; padding: 20px; font-size: 13px;"; endMsg.innerText = "— Anda telah mencapai akhir dari seluruh postingan —"; document.getElementById('feedBody').appendChild(endMsg); 

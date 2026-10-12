@@ -411,13 +411,13 @@ window.uploadProfilePic = function(input) {
                 document.querySelectorAll('img[src*="api_pegawai.php?media=avatar"], img[src*="api_pegawai.php?media=media"]').forEach(function(img) {
                     img.src = url + (url.includes('?') ? '&' : '?') + 'r=' + Date.now();
                 });
-                updateTopBarWidget(url, loggedInUser.frame);
-                if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
+                // STATE DULU, baru render — agar top-bar tidak ditimpa foto lama
+                loggedInUser.foto = url;
+                sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
                 if (typeof currentUserObj !== 'undefined' && currentUserObj && currentUserObj.id === loggedInUser.id) {
                     currentUserObj.foto = url;
                 }
-                loggedInUser.foto = url;
-                sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+                updateTopBarWidget(url, loggedInUser.frame);
                 uploadProgressDone('Foto profil diperbarui!', true);
             } else {
                 uploadProgressDone(result.message || 'Gagal mengubah foto profil.', false);
@@ -445,9 +445,8 @@ window.hapusFotoProfil = async function() {
         if (result.status === 'success') {
             const avatarImg = document.getElementById('profileAvatarImg');
             avatarImg.src = 'Image/default.jpg'; avatarImg.style.cursor = 'default'; avatarImg.onclick = null;
-            updateTopBarWidget('', '');
-            if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
             loggedInUser.foto = ''; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+            updateTopBarWidget('', '');
         } else { alert("Gagal menghapus foto profil: " + result.message); }
     } catch(e) { alert("Terjadi kesalahan jaringan."); }
 }
@@ -469,10 +468,9 @@ window.uploadFrame = function(input) {
                 const fUrl=result.frame+(result.frame.includes('?')?'&':'?')+'t='+Date.now();
                 const frameImg=document.getElementById('profileFrameImg');
                 if(frameImg){frameImg.src=result.frame;frameImg.style.display='block';}
-                updateTopBarWidget(loggedInUser.foto||'Image/default.jpg',fUrl);
-                if(typeof window.updateTopBarUI==='function'){window.updateTopBarUI();}
                 loggedInUser.frame=result.frame;
                 sessionStorage.setItem('loggedInUser',JSON.stringify(loggedInUser));
+                updateTopBarWidget(loggedInUser.foto||'Image/default.jpg',fUrl);
                 uploadProgressDone('Bingkai profil terpasang!',true);
             }else{uploadProgressDone(result.message||'Gagal mengunggah bingkai.',false);}
         }catch(e){uploadProgressDone('Respons server tidak valid.',false);}
@@ -495,8 +493,8 @@ window.hapusFrame = async function() {
         const result = await res.json();
         if (result.status === 'success') {
             const frameImg = document.getElementById('profileFrameImg'); frameImg.src = ''; frameImg.style.display = 'none';
+            loggedInUser.frame = ''; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
             updateTopBarWidget(loggedInUser.foto || '', '');
-            if (typeof window.updateTopBarUI === 'function') { window.updateTopBarUI(); }
             const hFrame = document.getElementById('profileFrameImg'); if(hFrame){ hFrame.src=''; hFrame.style.display='none'; }
             loggedInUser.frame = ''; sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
         }
