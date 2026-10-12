@@ -393,6 +393,7 @@ window.navigasiSPA = async function(url, menuElement = null) {
         else if (url.includes('pegawai') && typeof initPegawaiSPA === 'function') initPegawaiSPA();
         else if (url.includes('tujuan') && typeof initTujuanSPA === 'function') initTujuanSPA();
         else if (url.includes('penugasan') && typeof initPenugasanSPA === 'function') initPenugasanSPA();
+        else if (url.includes('notadinas') && typeof initNotaDinasSPA === 'function') initNotaDinasSPA();
         else if (url.includes('forum') && typeof initForumSPA === 'function') initForumSPA();
         else if (url.includes('profile') && typeof initProfileSPA === 'function') initProfileSPA();
 

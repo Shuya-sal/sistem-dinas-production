@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Nota Dinas - Sistem Dinas</title>
+    <link rel="stylesheet" href="CSS/style.css?v=15">
+    <style>
+        /* ================= ANIMASI TITIK ONLINE ================= */
+        .online-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            margin-right: 5px;
+            box-shadow: 0 0 5px #2ecc71;
+            animation: pulse-online 2s infinite;
+        }
+        @keyframes pulse-online {
+            0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+            70% { box-shadow: 0 0 0 5px rgba(46, 204, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        }
+        /* ========================================================= */
+
+        /* PICKER PEGAWAI */
+        .pegawai-picker {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .pegawai-picker-header {
+            background: #f1f5f9;
+            padding: 10px 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .pegawai-picker-header input {
+            flex: 1;
+            min-width: 200px;
+            padding: 7px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .pegawai-list {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .pegawai-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s;
+        }
+        .pegawai-item:hover { background: #eff6ff; }
+        .pegawai-item.selected { background: #dbeafe; }
+        .pegawai-item img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        .pegawai-item-info { flex: 1; min-width: 0; }
+        .pegawai-item-nama {
+            font-weight: 600;
+            font-size: 13px;
+            color: #1e293b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pegawai-item-jabatan {
+            font-size: 11px;
+            color: #64748b;
+        }
+        .pegawai-item-jabatan span {
+            background: #e2e8f0;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+
+        /* TERPILIH */
+        .terpilih-section {
+            margin-top: 15px;
+        }
+        .terpilih-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+        }
+        .terpilih-nama { font-weight: 600; font-size: 13px; flex: 1; }
+        .terpilih-jabatan { font-size: 11px; color: #64748b; }
+        .btn-hapus-terpilih {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #dc2626;
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .btn-hapus-terpilih:hover { background: #fca5a5; }
+
+        /* KATEGORI BADGE */
+        .kategori-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .kategori-badge.DD { background: #dbeafe; color: #1d4ed8; }
+        .kategori-badge.LD { background: #fef3c7; color: #92400e; }
+
+        /* PREVIEW KOTAK */
+        #notaPreview {
+            background: #fff;
+            border: 2px dashed #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 200px;
+        }
+        #notaPreview .preview-placeholder {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px;
+            font-size: 14px;
+        }
+
+        /* TOMBOL CETAK TERPISAH */
+        .print-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .btn-cetak {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            color: white;
+            transition: opacity 0.2s;
+        }
+        .btn-cetak:hover { opacity: 0.85; }
+        .btn-cetak:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-cetak.sosper    { background: #3b82f6; }
+        .btn-cetak.sosrev    { background: #8b5cf6; }
+        .btn-cetak.komisi    { background: #059669; }
+        .btn-cetak.ketua     { background: #d97706; }
+        .btn-cetak.undangan  { background: #db2777; }
+        .btn-cetak.komparasi { background: #64748b; }
+        .btn-cetak.pansus    { background: #0891b2; }
+
+        /* CARD PENGURUS */
+        .card-section {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .card-section h3 {
+            margin: 0 0 15px;
+            font-size: 15px;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 10px;
+        }
+        .card-section h3 span { font-size: 18px; }
+
+        /* PILIH KATEGORI GRID */
+        .kategori-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .kategori-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .kategori-card:hover { border-color: #3b82f6; color: #3b82f6; }
+        .kategori-card.active { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+        .kategori-card .icon { font-size: 24px; display: block; margin-bottom: 4px; }
+
+        /* TOMBOL SIMPAN */
+        .btn-simpan {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 28px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+            transition: all 0.2s;
+        }
+        .btn-simpan:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4); }
+        .btn-simpan:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ALERT */
+        .alert-box {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .alert-box.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .alert-box.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 900px;">
+        <div class="top-bar no-print">
+            <div class="user-info">
+                <img src="Image/default.jpg" id="topProfilePic" class="top-profile-img" onerror="this.onerror=null; this.src='Image/default.jpg';" alt="Foto">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="topProfileName" class="top-profile-name">Memuat...</div>
+                        <span id="topProfileRole" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;"></span>
+                    </div>
+                    <div style="font-size: 11px; color: #27ae60; margin-top: 2px; font-weight: bold; display: flex; align-items: center;">
+                        <span class="online-dot"></span> <span id="onlineCountText">Sedang aktif</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="notif-wrapper" onclick="toggleNotifikasi(event)" title="Pemberitahuan Komentar">
+                    &#128276;
+                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                    <div class="notif-menu" id="notifMenu">
+                        <div class="notif-header">Pemberitahuan Baru</div>
+                        <div class="notif-body" id="notifBody">
+                            <div class="notif-empty">Tidak ada pemberitahuan baru</div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logoutSistem()" class="btn-logout">&#128682; Keluar</button>
+            </div>
+        </div>
+
+        <h1 class="no-print">&#128203; Nota Dinas</h1>
+
+        <!-- ALERT -->
+        <div id="alertBox" class="alert-box"></div>
+
+        <!-- ================= JENIS NOTA DINAS ================= -->
+        <div class="card-section no-print">
+            <h3><span>1</span> Pilih Jenis Nota Dinas</h3>
+            <div style="display: flex; gap: 12px; margin-bottom: 15px;">
+                <label class="kategori-card" id="cardDD" onclick="pilihJenis('DD')">
+                    <span class="icon">&#128293;</span>
+                    Dalam Daerah (DD)
+                </label>
+                <label class="kategori-card" id="cardLD" onclick="pilihJenis('LD')">
+                    <span class="icon">&#9992;&#65039;</span>
+                    Luar Daerah (LD)
+                </label>
+            </div>
+
+            <!-- KATEGORI DD -->
+            <div id="kategoriDD" style="display:none;">
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Pilih kategori:</p>
+                <div class="kategori-grid">
+                    <div class="kategori-card" onclick="pilihKategori('sosper','DD')" id="kat-sosper">
+                        <span class="icon">&#127891;</span>Sosper
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('sosrev','DD')" id="kat-sosrev">
+                        <span class="icon">&#128227;</span>Sosrev
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('komisi_dd','DD')" id="kat-komisi_dd">
+                        <span class="icon">&#128101;</span>Komisi DD
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('keg_ketua_dd','DD')" id="kat-keg_ketua_dd">
+                        <span class="icon">&#127968;</span>Keg. Ketua
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('undangan_dd','DD')" id="kat-undangan_dd">
+                        <span class="icon">&#128236;</span>Undangan
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('komparasi_dd','DD')" id="kat-komparasi_dd">
+                        <span class="icon">&#128202;</span>Komparasi
+                    </div>
+                </div>
+            </div>
+
+            <!-- KATEGORI LD -->
+            <div id="kategoriLD" style="display:none;">
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Pilih kategori:</p>
+                <div class="kategori-grid">
+                    <div class="kategori-card" onclick="pilihKategori('komisi_ld','LD')" id="kat-komisi_ld">
+                        <span class="icon">&#128101;</span>Komisi LD
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('pansus_ld','LD')" id="kat-pansus_ld">
+                        <span class="icon">&#128209;</span>Pansus LD
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('keg_ketua_ld','LD')" id="kat-keg_ketua_ld">
+                        <span class="icon">&#127968;</span>Keg. Ketua
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('undangan_ld','LD')" id="kat-undangan_ld">
+                        <span class="icon">&#128236;</span>Undangan
+                    </div>
+                    <div class="kategori-card" onclick="pilihKategori('komparasi_ld','LD')" id="kat-komparasi_ld">
+                        <span class="icon">&#128202;</span>Komparasi
+                    </div>
+                </div>
+            </div>
+
+            <!-- LABEL TERPILIH -->
+            <div id="labelTerpilih" style="display:none; margin-top: 8px;">
+                <span id="badgeJenis" class="kategori-badge"></span>
+                <span style="margin-left: 8px; font-weight: 700; color: #334155;" id="labelKategori"></span>
+            </div>
+        </div>
+
+        <!-- ================= FORM NOTA DINAS ================= -->
+        <div class="card-section no-print" id="formSection" style="display:none;">
+            <h3><span>2</span> Isi Nota Dinas</h3>
+
+            <!-- BARIS 1: Nomor & Tanggal -->
+            <div class="form-row" style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569;">Nomor Nota Dinas *</label>
+                    <input type="text" id="nomorND" class="custom-input" placeholder="165/   /ND/HUMPRO-SETWAN/VI/2025" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569;">Tanggal Nota Dinas *</label>
+                    <input type="date" id="tanggalND" class="custom-input" style="width: 100%; margin-top: 5px;">
+                </div>
+            </div>
+
+            <!-- BARIS 2: Dasar Keputusan -->
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: 600; color: #475569;">Dasar Keputusan Pimpinan *</label>
+                <input type="text" id="dasarKeputusan" class="custom-input" placeholder="Keputusan Pimpinan DPRD Nomor: 13/DPRD/KP/2025, tanggal 20 Mei 2025" style="width: 100%; margin-top: 5px;">
+            </div>
+
+            <!-- BARIS 3: Lokasi & Tanggal Kegiatan -->
+            <div class="form-row" style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 2; min-width: 200px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569;">Tempat / Lokasi Kegiatan *</label>
+                    <input type="text" id="lokasiKeg" class="custom-input" placeholder="Kabupaten Hulu Sungai Utara" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 150px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569;">Tgl Mulai</label>
+                    <input type="date" id="tglMulai" class="custom-input" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 150px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569;">Tgl Selesai</label>
+                    <input type="date" id="tglSelesai" class="custom-input" style="width: 100%; margin-top: 5px;">
+                </div>
+            </div>
+
+            <!-- BARIS 4: Maksud -->
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: 600; color: #475569;">Maksud / Kegiatan *</label>
+                <textarea id="maksudKeg" class="custom-input" rows="3" placeholder="Peliputan, dokumentasi dan publikasi kegiatan Pimpinan dan Anggota DPRD dalam rangka Sosialisasi Propem Perda, Rancangan Perda, Perda dan Peraturan Perundang-Undangan (Sosper)..." style="width: 100%; margin-top: 5px; resize: vertical;"></textarea>
+            </div>
+
+            <!-- BARIS 5: Pembebanan -->
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: 600; color: #475569;">Pembebanan Biaya</label>
+                <input type="text" id="pembebanan" class="custom-input" value="Sekretariat DPRD Provinsi Kalimantan Selatan, Sub Kegiatan 4.02.02.1.04.0008 Publikasi dan Dokumentasi DPRD" style="width: 100%; margin-top: 5px;">
+            </div>
+        </div>
+
+        <!-- ================= PILIH PEGAWAI ================= -->
+        <div class="card-section no-print" id="pegawaiSection" style="display:none;">
+            <h3><span>3</span> Pilih Pegawai yang Ditugaskan</h3>
+            <p style="font-size: 13px; color: #64748b; margin-top: -5px;">Klik nama pegawai untuk menambahkan. Klik lagi untuk membatalkan.</p>
+
+            <div class="pegawai-picker">
+                <div class="pegawai-picker-header">
+                    <input type="text" id="searchPegawai" placeholder="Cari nama atau jabatan..." oninput="filterPegawaiPicker()">
+                    <span style="font-size: 12px; color: #94a3b8;" id="countPegawai">Memuat...</span>
+                </div>
+                <div class="pegawai-list" id="pegawaiList"></div>
+            </div>
+
+            <!-- TERPILIH -->
+            <div class="terpilih-section" id="terpilihSection" style="display:none;">
+                <div style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 8px;">
+                    &#10003; Terpilih (<span id="countTerpilih">0</span> orang)
+                </div>
+                <div id="terpilihList"></div>
+            </div>
+        </div>
+
+        <!-- ================= TOMBOL AKSI ================= -->
+        <div id="aksiSection" style="display:none;" class="no-print">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                <button class="btn-simpan" id="btnSimpan" onclick="simpanNotaDinas()">
+                    &#128190; Simpan Nota Dinas
+                </button>
+                <button class="btn-cetak sosper" id="btnCetakSosper" onclick="cetakNotadinasSosper()" style="display:none;">
+                    &#128439; Cetak Sosper
+                </button>
+                <button class="btn-cetak sosrev" id="btnCetakSosrev" onclick="cetakNotadinasSosrev()" style="display:none;">
+                    &#128439; Cetak Sosrev
+                </button>
+                <button class="btn-cetak komisi" id="btnCetakKomisi" onclick="cetakNotadinasKomisi()" style="display:none;">
+                    &#128439; Cetak Komisi
+                </button>
+                <button class="btn-cetak ketua" id="btnCetakKetua" onclick="cetakNotadinasKetua()" style="display:none;">
+                    &#128439; Cetak Keg. Ketua
+                </button>
+                <button class="btn-cetak undangan" id="btnCetakUndangan" onclick="cetakNotadinasUndangan()" style="display:none;">
+                    &#128439; Cetak Undangan
+                </button>
+                <button class="btn-cetak komparasi" id="btnCetakKomparasi" onclick="cetakNotadinasKomparasi()" style="display:none;">
+                    &#128439; Cetak Komparasi
+                </button>
+                <button class="btn-cetak pansus" id="btnCetakPansus" onclick="cetakNotadinasPansus()" style="display:none;">
+                    &#128439; Cetak Pansus
+                </button>
+            </div>
+            <div id="simpanStatus" style="font-size: 12px; margin-top: 8px; color: #64748b;"></div>
+        </div>
+
+        <!-- ================= DAFTAR NOTA DINAS ================= -->
+        <div class="card-section" id="riwayatSection">
+            <h3>&#128218; Daftar Nota Dinas Tersimpan</h3>
+            <div id="tabelNotaDinas" class="table-section" style="padding: 0;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #f1f5f9;">
+                            <th style="padding: 10px 12px; text-align: left;">#</th>
+                            <th style="padding: 10px 12px; text-align: left;">Jenis</th>
+                            <th style="padding: 10px 12px; text-align: left;">Kategori</th>
+                            <th style="padding: 10px 12px; text-align: left;">Nomor</th>
+                            <th style="padding: 10px 12px; text-align: left;">Tanggal</th>
+                            <th style="padding: 10px 12px; text-align: left;">Pegawai</th>
+                            <th style="padding: 10px 12px; text-align: left;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="notaDinasBody">
+                        <tr><td colspan="7" style="padding: 20px; text-align: center; color: #94a3b8;">Memuat...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PRINT TEMPLATE ================= -->
+    <div id="printTemplate" class="print-only"></div>
+
+    <!-- SCRIPTS -->
+    <script src="Javascript/notadinas.js"></script>
+    <script src="Javascript/Cetak/cetak_kopsurat.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_sosper.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_sosrev.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_komisi_dd.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_komisi_ld.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_keg_ketua_dd.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_keg_ketua_ld.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_undangan_dd.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_undangan_ld.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_komparasi_dd.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_komparasi_ld.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_pansus_ld.js"></script>
+    <script src="Javascript/gembok.js?v=upload-multipart-1"></script>
+</body>
+</html>
