@@ -1474,8 +1474,8 @@ window.cekNotifikasiLonceng = async function() {
                         unreadHtml += `<img src="${n.avatar_url}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid #3b82f6;">`;
                         unreadHtml += `<div>`;
                         unreadHtml += `<div style="font-weight:bold;
-                        color:#0f172a;">${escapeHtml(n.commenter_name)}</div>`;
-                        unreadHtml += `<div style="color:#64748b; font-size:13px;">${escapeHtml(n.message_short)}</div>`;
+                        color:#0f172a;">${escapeHTML(n.commenter_name)}</div>`;
+                        unreadHtml += `<div style="color:#64748b; font-size:13px;">${escapeHTML(n.message_short)}</div>`;
                         unreadHtml += `<div style="color:#94a3b8; font-size:11px;">${formatWaktu(n.created_at)}</div>`;
                         unreadHtml += `</div></div></div>`;
                     } else if (n.type === 'forum') {
@@ -1483,8 +1483,8 @@ window.cekNotifikasiLonceng = async function() {
                         unreadHtml += `<div style="display:flex; align-items:center; gap:12px;">`;
                         unreadHtml += `<img src="${n.avatar_url}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid #3b82f6;">`;
                         unreadHtml += `<div>`;
-                        unreadHtml += `<div style="font-weight:bold; color:#0f172a;">${escapeHtml(n.commenter_name)}</div>`;
-                        unreadHtml += `<div style="color:#64748b; font-size:13px;">${escapeHtml(n.post_title)}</div>`;
+                        unreadHtml += `<div style="font-weight:bold; color:#0f172a;">${escapeHTML(n.commenter_name)}</div>`;
+                        unreadHtml += `<div style="color:#64748b; font-size:13px;">${escapeHTML(n.post_title)}</div>`;
                         unreadHtml += `<div style="color:#94a3b8; font-size:11px;">${formatWaktu(n.created_at)}</div>`;
                         unreadHtml += `</div></div></div>`;
                     }

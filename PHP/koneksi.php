@@ -117,7 +117,7 @@ if (!function_exists('resolve_csrf_token')) {
 $request_method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $target_script = basename($_SERVER['SCRIPT_NAME'] ?? '');
 $is_state_change = in_array($request_method, ['POST', 'PUT', 'PATCH', 'DELETE']);
-$is_exempt = in_array($target_script, ['api_login.php', 'ping.php']);
+$is_exempt = in_array($target_script, ['api_login.php', 'ping.php', 'pusher_auth.php']);
 
 if ($is_state_change && !$is_exempt) {
     if (!isset($_SESSION['pegawai_id'])) {
