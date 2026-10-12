@@ -1476,7 +1476,7 @@ window.cekNotifikasiLonceng = async function() {
                         unreadHtml += `<div style="font-weight:bold;
                         color:#0f172a;">${escapeHTML(n.commenter_name)}</div>`;
                         unreadHtml += `<div style="color:#64748b; font-size:13px;">${escapeHTML(n.message_short)}</div>`;
-                        unreadHtml += `<div style="color:#94a3b8; font-size:11px;">${formatWaktu(n.created_at)}</div>`;
+                        unreadHtml += `<div style="color:#94a3b8; font-size:11px;">${timeAgo(n.created_at)}</div>`;
                         unreadHtml += `</div></div></div>`;
                     } else if (n.type === 'forum') {
                         unreadHtml += `<div class="notif-item" onclick="bukaPostinganDariNotif('${n.post_id}', '${n.commenter_name.replace(/'/g, "\\'")}', '${n.comment_id}')">`;
@@ -1485,7 +1485,7 @@ window.cekNotifikasiLonceng = async function() {
                         unreadHtml += `<div>`;
                         unreadHtml += `<div style="font-weight:bold; color:#0f172a;">${escapeHTML(n.commenter_name)}</div>`;
                         unreadHtml += `<div style="color:#64748b; font-size:13px;">${escapeHTML(n.post_title)}</div>`;
-                        unreadHtml += `<div style="color:#94a3b8; font-size:11px;">${formatWaktu(n.created_at)}</div>`;
+                        unreadHtml += `<div style="color:#94a3b8; font-size:11px;">${timeAgo(n.created_at)}</div>`;
                         unreadHtml += `</div></div></div>`;
                     }
                 }
