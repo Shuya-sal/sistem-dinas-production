@@ -74,8 +74,8 @@ window.initNotaDinasSPA = initNotaDinasSPA;
 // ==================================================================
 function loadMasterNd() {
     return Promise.all([
-        // pegawai
-        fetch('PHP/api_pegawai.php', {
+        // pegawai — SEMUA, tanpa limit paginasi, supaya TomSelect dropdown lengkap
+        fetch('PHP/api_pegawai.php?limit=all', {
             headers: { 'X-CSRF-Token': ndCsrf() },
             credentials: 'same-origin'
         }).then(function(r){ return r.json(); }),
