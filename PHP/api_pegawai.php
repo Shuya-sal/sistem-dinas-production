@@ -261,49 +261,24 @@ $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereCond
             // Daftar UI hanya membutuhkan kolom ringkas. Jangan memakai SELECT *
             // karena foto Base64 dan data profil lain dapat membuat respons sangat besar
             // dan terputus pada shared hosting.
-            // CATATAN: mysqli_report aktif di server ini (mode exception), jadi setiap
-            // query dibungkus try/catch — tanda @ TIDAK menekan exception.
-            try {
-                $sql = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
+            // Kolom nik/tempat_lahir/tgl_lahir/alamat WAJIB ikut dikirim karena
+            // cetak_dewan.js memakainya di PAKTA INTEGRITAS.
+            $sql = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
                nik, tempat_lahir, tgl_lahir, alamat,
                foto, tingkat, is_donatur, is_sangean
         FROM pegawai $whereClause ORDER BY nama ASC";
-                $list_stmt = $conn->prepare($sql);
-                if (!empty($whereConditions)) { $list_stmt->bind_param($whereTypes, ...$whereParams); }
-                $list_stmt->execute();
-                $result = $list_stmt->get_result();
-                $data = [];
-                while ($row = $result->fetch_assoc()) {
-                    // Avatar disajikan terpisah agar data Base64 tidak membengkakkan JSON daftar.
-                    $row['foto'] = 'PHP/api_pegawai.php?avatar=' . rawurlencode($row['id']);
-                    $data[] = $row;
-                }
-                $list_stmt->close();
-                echo json_encode(["status" => "success", "data" => $data]);
-                exit;
-            } catch (\Throwable $e) {
-                // Jatuh ke kolom inti (tanpa kolom profil) supaya halaman tetap tampil.
-                try {
-                    $sql2 = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
-               foto, tingkat, is_donatur, is_sangean
-        FROM pegawai $whereClause ORDER BY nama ASC";
-                    $list_stmt2 = $conn->prepare($sql2);
-                    if (!empty($whereConditions)) { $list_stmt2->bind_param($whereTypes, ...$whereParams); }
-                    $list_stmt2->execute();
-                    $result2 = $list_stmt2->get_result();
-                    $data2 = [];
-                    while ($row2 = $result2->fetch_assoc()) {
-                        $row2['foto'] = 'PHP/api_pegawai.php?avatar=' . rawurlencode($row2['id']);
-                        $data2[] = $row2;
-                    }
-                    $list_stmt2->close();
-                    echo json_encode(["status" => "success", "data" => $data2]);
-                    exit;
-                } catch (\Throwable $e2) {
-                    echo json_encode(["status" => "error", "message" => "Gagal membaca data pegawai."]);
-                    exit;
-                }
+$list_stmt = $conn->prepare($sql);
+if (!empty($whereConditions)) { $list_stmt->bind_param($whereTypes, ...$whereParams); }
+$list_stmt->execute();
+$result = $list_stmt->get_result();
+            $data = [];
+            while ($row = $result->fetch_assoc()) {
+                // Avatar disajikan terpisah agar data Base64 tidak membengkakkan JSON daftar.
+                $row['foto'] = 'PHP/api_pegawai.php?avatar=' . rawurlencode($row['id']);
+                $data[] = $row;
             }
+            echo json_encode(["status" => "success", "data" => $data]);
+            exit;
         }
 
         if ($limit_param === 'all') {
