@@ -262,6 +262,7 @@ $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereCond
             // karena foto Base64 dan data profil lain dapat membuat respons sangat besar
             // dan terputus pada shared hosting.
             $sql = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
+               nik, tempat_lahir, tgl_lahir, alamat,
                foto, tingkat, is_donatur, is_sangean
         FROM pegawai $whereClause ORDER BY nama ASC";
 $list_stmt = $conn->prepare($sql);
