@@ -43,6 +43,8 @@ $conn->query("
         tgl_mulai DATE DEFAULT NULL,
         tgl_selesai DATE DEFAULT NULL,
         pembebanan VARCHAR(255) DEFAULT '',
+        tujuan_id VARCHAR(80) DEFAULT '',
+        pemimpin VARCHAR(255) DEFAULT '',
         pegawai_json TEXT,
         grup_json TEXT,
         created_by VARCHAR(50) DEFAULT '',
@@ -95,6 +97,19 @@ if ($method === 'POST') {
             $pegawai_json = json_encode($data['pegawai'] ?? [], JSON_UNESCAPED_UNICODE);
         }
         $grup_json = json_encode($data['grup'] ?? [], JSON_UNESCAPED_UNICODE);
+        $tujuan_id   = trim($data['tujuan_id'] ?? '');
+        $pemimpin    = trim($data['pemimpin'] ?? '');
+        // Fallback: ambil pemimpin pertama dari grup bila kolom global kosong
+        if ($pemimpin === '' && !empty($data['grup']) && is_array($data['grup'])) {
+            foreach ($data['grup'] as $g) {
+                if (!empty($g['pemimpin'])) { $pemimpin = trim($g['pemimpin']); break; }
+            }
+        }
+        if ($tujuan_id === '' && !empty($data['grup']) && is_array($data['grup'])) {
+            foreach ($data['grup'] as $g) {
+                if (!empty($g['tujuanId'])) { $tujuan_id = trim($g['tujuanId']); break; }
+            }
+        }
         $created_by  = $_SESSION['pegawai_id'];
 
         if ($id === '') {
@@ -115,21 +130,27 @@ if ($method === 'POST') {
         if ($ada) {
             $sql = "UPDATE nota_dinas SET
                 jenis=?, kategori=?, nomor=?, tanggal=?, dasar=?, maksud=?,
-                lokasi=?, tgl_mulai=?, tgl_selesai=?, pembebanan=?, pegawai_json=?, grup_json=?
+                lokasi=?, tgl_mulai=?, tgl_selesai=?, pembebanan=?,
+                tujuan_id=?, pemimpin=?,
+                pegawai_json=?, grup_json=?
                 WHERE id=?";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssssssssss",
+            $stmt->bind_param("ssssssssssssss",
                 $jenis, $kategori, $nomor, $tanggal, $dasar, $maksud,
-                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan, $pegawai_json, $grup_json, $id
+                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan,
+                $tujuan_id, $pemimpin,
+                $pegawai_json, $grup_json, $id
             );
         } else {
             $sql = "INSERT INTO nota_dinas
-                (id,jenis,kategori,nomor,tanggal,dasar,maksud,lokasi,tgl_mulai,tgl_selesai,pembebanan,pegawai_json,grup_json,created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                (id,jenis,kategori,nomor,tanggal,dasar,maksud,lokasi,tgl_mulai,tgl_selesai,pembebanan,tujuan_id,pemimpin,pegawai_json,grup_json,created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssssssssssssss",
+            $stmt->bind_param("ssssssssssssssss",
                 $id, $jenis, $kategori, $nomor, $tanggal, $dasar, $maksud,
-                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan, $pegawai_json, $grup_json, $created_by
+                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan,
+                $tujuan_id, $pemimpin,
+                $pegawai_json, $grup_json, $created_by
             );
         }
 
