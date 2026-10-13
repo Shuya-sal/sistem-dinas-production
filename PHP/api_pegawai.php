@@ -263,9 +263,14 @@ $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereCond
             // dan terputus pada shared hosting.
             // Kolom nik/tempat_lahir/tgl_lahir/alamat WAJIB ikut dikirim karena
             // cetak_dewan.js memakainya di PAKTA INTEGRITAS.
+            // FATAL FIX: kolom `foto` TIDAK boleh diselect utuh — beberapa baris
+            // menyimpan Base64 ratusan KB hingga MB, 88 baris melebihi
+            // memory_limit 256M -> PHP fatal -> output kosong (HTTP 200 tanpa isi).
+            // Kirim hanya URL avatar, pola sama dengan branch `profile`.
             $sql = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
                nik, tempat_lahir, tgl_lahir, alamat,
-               foto, tingkat, is_donatur, is_sangean
+               (foto IS NOT NULL AND foto <> '') AS has_foto,
+               tingkat, is_donatur, is_sangean
         FROM pegawai $whereClause ORDER BY nama ASC";
 $list_stmt = $conn->prepare($sql);
 if (!empty($whereConditions)) { $list_stmt->bind_param($whereTypes, ...$whereParams); }
@@ -275,6 +280,7 @@ $result = $list_stmt->get_result();
             while ($row = $result->fetch_assoc()) {
                 // Avatar disajikan terpisah agar data Base64 tidak membengkakkan JSON daftar.
                 $row['foto'] = 'PHP/api_pegawai.php?avatar=' . rawurlencode($row['id']);
+                unset($row['has_foto']);
                 $data[] = $row;
             }
             echo json_encode(["status" => "success", "data" => $data]);
