@@ -1161,34 +1161,18 @@ async function initPenugasanPage() {
     try {
         const resPegawai = await fetch('PHP/api_pegawai.php?limit=summary', {
             cache: 'no-store',
-            headers: { 'Accept': 'application/json' },
-            credentials: 'same-origin'
+            headers: { 'Accept': 'application/json' }
         });
         const pegawaiText = await resPegawai.text();
-        let rawPegawai = null;
+        let rawPegawai;
 
         try {
-            rawPegawai = pegawaiText ? JSON.parse(pegawaiText) : null;
+            rawPegawai = JSON.parse(pegawaiText);
         } catch (parseError) {
-            rawPegawai = null;
+            throw new Error(`Data pegawai bukan JSON (HTTP ${resPegawai.status}).`);
         }
 
-        // Sesi habis: server membalas 401 "Akses Ilegal!" -> arahkan login ulang,
-        // jangan tampilkan pesan "bukan JSON" yang menyesatkan.
-        if (resPegawai.status === 401 || resPegawai.status === 403) {
-            const pesanSesi = 'Sesi login Anda berakhir. Silakan login ulang.';
-            if (typeof tampilkanNotifikasi === 'function') tampilkanNotifikasi(pesanSesi, 'error');
-            if (confirm(pesanSesi + '\n\nBuka halaman login sekarang?')) {
-                window.location.href = 'login.html';
-            }
-            throw new Error(pesanSesi);
-        }
-
-        if (!rawPegawai) {
-            throw new Error(`Server tidak mengirim data pegawai (HTTP ${resPegawai.status}). Coba muat ulang halaman.`);
-        }
-
-        if (rawPegawai.status !== 'success' || !Array.isArray(rawPegawai.data)) {
+        if (!resPegawai.ok || rawPegawai.status !== 'success' || !Array.isArray(rawPegawai.data)) {
             throw new Error(rawPegawai.message || `Data pegawai gagal dimuat (HTTP ${resPegawai.status}).`);
         }
 
