@@ -258,58 +258,52 @@ $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereCond
         }
 
         if ($limit_param === 'badges' || $limit_param === 'summary') {
-            // Pastikan kolom profil lengkap tersedia (dipakai PAKTA INTEGRITAS).
-            // Idempotent + benar-benar defensif: kegagalan ALTER (mis. hak user DB
-            // terbatas) TIDAK boleh membuat endpoint fatal / mengembalikan non-JSON.
+            // Daftar UI hanya membutuhkan kolom ringkas. Jangan memakai SELECT *
+            // karena foto Base64 dan data profil lain dapat membuat respons sangat besar
+            // dan terputus pada shared hosting.
+            // CATATAN: mysqli_report aktif di server ini (mode exception), jadi setiap
+            // query dibungkus try/catch — tanda @ TIDAK menekan exception.
             try {
-                $kolom_wajib = [
-                    'nik'          => "ALTER TABLE pegawai ADD COLUMN nik VARCHAR(32) DEFAULT ''",
-                    'tempat_lahir' => "ALTER TABLE pegawai ADD COLUMN tempat_lahir VARCHAR(100) DEFAULT ''",
-                    'tgl_lahir'    => "ALTER TABLE pegawai ADD COLUMN tgl_lahir DATE DEFAULT NULL",
-                    'alamat'       => "ALTER TABLE pegawai ADD COLUMN alamat TEXT",
-                ];
-                foreach ($kolom_wajib as $nama_kolom => $ddl) {
-                    $cek_kolom = @$conn->query("SHOW COLUMNS FROM pegawai LIKE '" . $conn->real_escape_string($nama_kolom) . "'");
-                    if ($cek_kolom && $cek_kolom->num_rows === 0) {
-                        @$conn->query($ddl);
-                    }
-                }
-            } catch (\Throwable $e) {
-                // diabaikan: lanjut dengan kolom yang tersedia
-            }
-
-            $kolom_inti = "id, nama, nip, jabatan, golongan, bagian, status,
-               foto, tingkat, is_donatur, is_sangean";
-            $kolom_lengkap = "id, nama, nip, jabatan, golongan, bagian, status,
+                $sql = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
                nik, tempat_lahir, tgl_lahir, alamat,
-               foto, tingkat, is_donatur, is_sangean";
-
-            $data = [];
-            $list_stmt = null;
-
-            // Coba lengkap dulu, kalau gagal jatuh ke kolom inti.
-            foreach ([$kolom_lengkap, $kolom_inti] as $kolom_summary) {
-                $sql = "SELECT $kolom_summary FROM pegawai $whereClause ORDER BY nama ASC";
-                $coba = @$conn->prepare($sql);
-                if (!$coba) { continue; }
-                if (!empty($whereConditions)) { @$coba->bind_param($whereTypes, ...$whereParams); }
-                if (!@$coba->execute()) { @$coba->close(); continue; }
-                $res = @$coba->get_result();
-                if (!$res) { @$coba->close(); continue; }
-                while ($row = $res->fetch_assoc()) {
+               foto, tingkat, is_donatur, is_sangean
+        FROM pegawai $whereClause ORDER BY nama ASC";
+                $list_stmt = $conn->prepare($sql);
+                if (!empty($whereConditions)) { $list_stmt->bind_param($whereTypes, ...$whereParams); }
+                $list_stmt->execute();
+                $result = $list_stmt->get_result();
+                $data = [];
+                while ($row = $result->fetch_assoc()) {
+                    // Avatar disajikan terpisah agar data Base64 tidak membengkakkan JSON daftar.
                     $row['foto'] = 'PHP/api_pegawai.php?avatar=' . rawurlencode($row['id']);
                     $data[] = $row;
                 }
-                $list_stmt = $coba;
-                break;
-            }
-
-            if ($list_stmt === null) {
-                echo json_encode(["status" => "error", "message" => "Gagal membaca data pegawai."]);
+                $list_stmt->close();
+                echo json_encode(["status" => "success", "data" => $data]);
                 exit;
+            } catch (\Throwable $e) {
+                // Jatuh ke kolom inti (tanpa kolom profil) supaya halaman tetap tampil.
+                try {
+                    $sql2 = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
+               foto, tingkat, is_donatur, is_sangean
+        FROM pegawai $whereClause ORDER BY nama ASC";
+                    $list_stmt2 = $conn->prepare($sql2);
+                    if (!empty($whereConditions)) { $list_stmt2->bind_param($whereTypes, ...$whereParams); }
+                    $list_stmt2->execute();
+                    $result2 = $list_stmt2->get_result();
+                    $data2 = [];
+                    while ($row2 = $result2->fetch_assoc()) {
+                        $row2['foto'] = 'PHP/api_pegawai.php?avatar=' . rawurlencode($row2['id']);
+                        $data2[] = $row2;
+                    }
+                    $list_stmt2->close();
+                    echo json_encode(["status" => "success", "data" => $data2]);
+                    exit;
+                } catch (\Throwable $e2) {
+                    echo json_encode(["status" => "error", "message" => "Gagal membaca data pegawai."]);
+                    exit;
+                }
             }
-            echo json_encode(["status" => "success", "data" => $data]);
-            exit;
         }
 
         if ($limit_param === 'all') {
