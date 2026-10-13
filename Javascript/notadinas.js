@@ -1,310 +1,380 @@
 // ================================================================
 // NOTA DINAS — Javascript/notadinas.js
-// Form pembuatan Nota Dinas (DD & LD), 11 jenis, tombol cetak TERPISAH.
+// Dipasangkan dengan notadinas.html (versi server live).
+// Alur: pilih tipe (DD/LD) → pilih kategori → isi form →
+//       pilih pegawai → simpan → cetak (tombol TERPISAH per kategori).
 // ================================================================
-
-// ---------- KONFIGURASI JENIS PER TIPE ----------
-const ND_JENIS = {
-    DD: [
-        { key: 'sosper',    label: 'Sosper',           cetak: 'cetakLayoutSosper'   },
-        { key: 'sosrev',    label: 'Sosrev',           cetak: 'cetakLayoutSosrev'   },
-        { key: 'komisi',    label: 'Komisi DD',        cetak: 'cetakLayoutKomisi'   },
-        { key: 'ketua',     label: 'Kegiatan Ketua',   cetak: 'cetakLayoutKetua'    },
-        { key: 'undangan',  label: 'Undangan',         cetak: 'cetakLayoutUndangan' },
-        { key: 'komparasi', label: 'Komparasi',        cetak: 'cetakLayoutKomparasi'}
-    ],
-    LD: [
-        { key: 'komisi',    label: 'Komisi LD',        cetak: 'cetakLayoutKomisi'   },
-        { key: 'pansus',    label: 'Pansus LD',        cetak: 'cetakLayoutPansus'   },
-        { key: 'ketua',     label: 'Kegiatan Ketua',   cetak: 'cetakLayoutKetua'    },
-        { key: 'undangan',  label: 'Undangan',         cetak: 'cetakLayoutUndangan' },
-        { key: 'komparasi', label: 'Komparasi',        cetak: 'cetakLayoutKomparasi'}
-    ]
-};
 
 // ---------- STATE ----------
-let ndState = {
-    tipe: null,          // 'DD' | 'LD'
-    jenis: null,         // key dari ND_JENIS
-    pegawai: [],         // daftar pegawai terpilih
-    daftarPegawai: []    // master daftar pegawai dari server
-};
+var ndTipe     = null;   // 'DD' | 'LD'
+var ndKategori = null;   // key kategori
+var ndPegawai  = [];     // pegawai terpilih
+var ndMaster   = [];     // daftar pegawai dari server
 
+// ---------- UTIL ----------
 function ndEsc(s) {
     if (s == null) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
 }
-
-function ndCsrf() {
-    return sessionStorage.getItem('csrf_token') || '';
-}
+function ndCsrf() { return sessionStorage.getItem('csrf_token') || ''; }
 
 // ================================================================
-// INIT (dipanggil oleh navigasiSPA di gembok.js)
+// INIT — dipanggil oleh navigasiSPA() di gembok.js
 // ================================================================
 function initNotaDinasSPA() {
-    ndState.tipe = null;
-    ndState.jenis = null;
-    ndState.pegawai = [];
+    ndTipe     = null;
+    ndKategori = null;
+    ndPegawai  = [];
+    ndMaster   = [];
 
-    // Muat daftar pegawai untuk dropdown
-    ndMuatDaftarPegawai();
+    var hide = function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; };
+    hide('kategoriDD'); hide('kategoriLD'); hide('labelTerpilih');
+    hide('formSection'); hide('pegawaiSection'); hide('aksiSection');
 
-    // Render pilihan tipe di awal
-    ndRenderPilihTipe();
+    ['btnCetakSosper','btnCetakSosrev','btnCetakKomisi','btnCetakKetua',
+     'btnCetakUndangan','btnCetakKomparasi','btnCetakPansus'].forEach(hide);
 
-    // Sembunyikan area form & tombol cetak
-    const areaForm = document.getElementById('ndAreaForm');
-    if (areaForm) areaForm.style.display = 'none';
-    const areaCetak = document.getElementById('ndAreaCetak');
-    if (areaCetak) areaCetak.style.display = 'none';
+    var cd = document.getElementById('cardDD');
+    var cl = document.getElementById('cardLD');
+    if (cd) cd.classList.remove('active');
+    if (cl) cl.classList.remove('active');
+
+    var tglEl = document.getElementById('tanggalND');
+    if (tglEl && !tglEl.value) tglEl.value = new Date().toISOString().slice(0,10);
+
+    loadDaftarPegawai();
+    loadRiwayatNotaDinas();
 }
 window.initNotaDinasSPA = initNotaDinasSPA;
 
 // ================================================================
-// LOAD DATA PEGAWAI (untuk pilih orang dari daftar)
-// ================================================================
-async function ndMuatDaftarPegawai() {
-    try {
-        const res = await fetch('PHP/api_pegawai.php', {
-            headers: { 'X-CSRF-Token': ndCsrf() },
-            credentials: 'same-origin'
-        });
-        const json = await res.json();
-        const list = Array.isArray(json) ? json : (json.data || []);
-        ndState.daftarPegawai = list.map(p => ({
-            id: p.id ?? p.pegawai_id,
-            nama: p.nama ?? p.nama_pegawai ?? '',
-            jabatan: p.jabatan ?? p.nama_jabatan ?? ''
-        }));
-        ndRenderDropdownPegawai();
-    } catch (e) {
-        console.warn('Gagal memuat daftar pegawai:', e);
-        ndState.daftarPegawai = [];
-    }
-}
-
-function ndRenderDropdownPegawai() {
-    const sel = document.getElementById('ndPilihPegawai');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">-- Pilih Pegawai --</option>' +
-        ndState.daftarPegawai.map((p,i) =>
-            `<option value="${i}">${ndEsc(p.nama)}${p.jabatan ? ' — '+ndEsc(p.jabatan) : ''}</option>`
-        ).join('');
-}
-
-// ================================================================
 // LANGKAH 1: PILIH TIPE (DD / LD)
 // ================================================================
-function ndRenderPilihTipe() {
-    const wrap = document.getElementById('ndPilihTipeWrap');
-    if (!wrap) return;
-    wrap.innerHTML = `
-        <div style="display:flex; gap:15px; flex-wrap:wrap;">
-            <button type="button" class="nav-btn" style="padding:14px 28px; font-size:15px;"
-                onclick="ndPilihTipe('DD')">📍 Dalam Daerah (DD)</button>
-            <button type="button" class="nav-btn" style="padding:14px 28px; font-size:15px;"
-                onclick="ndPilihTipe('LD')">✈️ Luar Daerah (LD)</button>
-        </div>
-    `;
+function pilihJenis(tipe) {
+    ndTipe     = tipe;
+    ndKategori = null;
+    ndPegawai  = [];
+
+    var hide = function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; };
+    hide('kategoriDD'); hide('kategoriLD'); hide('formSection');
+    hide('pegawaiSection'); hide('aksiSection'); hide('labelTerpilih');
+
+    var cd = document.getElementById('cardDD');
+    var cl = document.getElementById('cardLD');
+    if (cd) cd.classList.toggle('active', tipe === 'DD');
+    if (cl) cl.classList.toggle('active', tipe === 'LD');
+
+    var grid = document.getElementById('kategori' + tipe);
+    if (grid) grid.style.display = '';
+
+    var badge = document.getElementById('badgeJenis');
+    if (badge) { badge.textContent = ''; badge.className = 'kategori-badge'; }
+    var lbl = document.getElementById('labelKategori');
+    if (lbl) lbl.textContent = '';
 }
-
-function ndPilihTipe(tipe) {
-    ndState.tipe = tipe;
-    ndState.jenis = null;
-    ndState.pegawai = [];
-
-    // Tampilkan area form, sembunyikan pilihan cetak
-    document.getElementById('ndAreaForm').style.display = '';
-    document.getElementById('ndAreaCetak').style.display = 'none';
-
-    ndRenderJenis();
-    ndRenderPegawaiTerpilih();
-    ndRenderTombolCetak();
-    ndResetFormFields();
-}
+window.pilihJenis = pilihJenis;
 
 // ================================================================
-// LANGKAH 2: PILIH JENIS NOTA DINAS
+// LANGKAH 2: PILIH KATEGORI
 // ================================================================
-function ndRenderJenis() {
-    const wrap = document.getElementById('ndPilihJenisWrap');
-    if (!wrap) return;
-    const list = ND_JENIS[ndState.tipe] || [];
-    wrap.innerHTML = list.map(j =>
-        `<button type="button" class="nav-btn" data-jenis="${j.key}"
-            style="padding:10px 18px; font-size:13px;"
-            onclick="ndPilihJenis('${j.key}')">${ndEsc(j.label)}</button>`
-    ).join('');
-}
+var ND_LABEL = {
+    sosper:'Sosper', sosrev:'Sosrev', komisi_dd:'Komisi DD', komisi_ld:'Komisi LD',
+    keg_ketua_dd:'Keg. Ketua DD', keg_ketua_ld:'Keg. Ketua LD',
+    undangan_dd:'Undangan DD', undangan_ld:'Undangan LD',
+    komparasi_dd:'Komparasi DD', komparasi_ld:'Komparasi LD', pansus_ld:'Pansus LD'
+};
 
-function ndPilihJenis(key) {
-    ndState.jenis = key;
-    document.querySelectorAll('#ndPilihJenisWrap .nav-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.jenis === key);
+function pilihKategori(key, tipe) {
+    ndKategori = key;
+    ndPegawai  = [];
+
+    document.querySelectorAll('.kategori-grid .kategori-card').forEach(function(el){
+        el.classList.remove('active');
     });
-    // Tampilkan tombol cetak untuk jenis ini
-    document.getElementById('ndAreaCetak').style.display = '';
-    ndRenderTombolCetak();
+    var el = document.getElementById('kat-' + key);
+    if (el) el.classList.add('active');
+
+    var badge = document.getElementById('badgeJenis');
+    if (badge) {
+        badge.textContent = ndTipe;
+        badge.className   = 'kategori-badge ' + ndTipe;
+    }
+    var lbl = document.getElementById('labelKategori');
+    if (lbl) lbl.textContent = '— ' + (ND_LABEL[key] || key);
+    var lt = document.getElementById('labelTerpilih');
+    if (lt) lt.style.display = '';
+
+    var fs = document.getElementById('formSection');    if (fs) fs.style.display = '';
+    var ps = document.getElementById('pegawaiSection'); if (ps) ps.style.display = '';
+    var as = document.getElementById('aksiSection');    if (as) as.style.display = '';
+
+    renderTerpilih();
+    renderPegawaiList(ndMaster);
+
+    // TAMPILKAN HANYA TOMBOL CETAK UNTUK KATEGORI INI (terpisah)
+    var map = {
+        sosper:'btnCetakSosper', sosrev:'btnCetakSosrev',
+        komisi_dd:'btnCetakKomisi', komisi_ld:'btnCetakKomisi',
+        keg_ketua_dd:'btnCetakKetua', keg_ketua_ld:'btnCetakKetua',
+        undangan_dd:'btnCetakUndangan', undangan_ld:'btnCetakUndangan',
+        komparasi_dd:'btnCetakKomparasi', komparasi_ld:'btnCetakKomparasi',
+        pansus_ld:'btnCetakPansus'
+    };
+    var showId = map[key];
+    ['btnCetakSosper','btnCetakSosrev','btnCetakKomisi','btnCetakKetua',
+     'btnCetakUndangan','btnCetakKomparasi','btnCetakPansus'].forEach(function(id){
+        var b = document.getElementById(id);
+        if (b) b.style.display = (id === showId) ? '' : 'none';
+    });
 }
+window.pilihKategori = pilihKategori;
 
 // ================================================================
-// LANGKAH 3: PILIH PEGAWAI DARI DAFTAR
+// PEGAWAI PICKER — pilih dari daftar pegawai yang ada
 // ================================================================
-function ndTambahPegawai() {
-    const sel = document.getElementById('ndPilihPegawai');
-    if (!sel || sel.value === '') return;
-    const p = ndState.daftarPegawai[parseInt(sel.value, 10)];
+function loadDaftarPegawai() {
+    fetch('PHP/api_pegawai.php', {
+        headers: { 'X-CSRF-Token': ndCsrf() },
+        credentials: 'same-origin'
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(json){
+        var list = Array.isArray(json) ? json : (json.data || []);
+        ndMaster = list.map(function(p){
+            return {
+                id: p.id || p.pegawai_id,
+                nama: p.nama || p.nama_pegawai || '',
+                jabatan: p.jabatan || p.nama_jabatan || '',
+                foto: p.foto || p.foto_url || 'Image/default.jpg'
+            };
+        });
+        var cp = document.getElementById('countPegawai');
+        if (cp) cp.textContent = ndMaster.length + ' orang';
+        renderPegawaiList(ndMaster);
+    })
+    .catch(function(){
+        var cp = document.getElementById('countPegawai');
+        if (cp) cp.textContent = 'Gagal memuat';
+    });
+}
+
+function renderPegawaiList(list) {
+    var container = document.getElementById('pegawaiList');
+    if (!container) return;
+    if (!list || list.length === 0) {
+        container.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">Tidak ada pegawai ditemukan.</div>';
+        return;
+    }
+    container.innerHTML = list.map(function(p){
+        var selected = ndPegawai.some(function(x){ return x.id === p.id; });
+        var idx = ndMaster.indexOf(p);
+        return '<div class="pegawai-item' + (selected ? ' selected' : '') + '" ' +
+               'onclick="togglePegawai(' + idx + ')">' +
+               '<img src="' + ndEsc(p.foto) + '" onerror="this.src=\'Image/default.jpg\'" alt="">' +
+               '<div class="pegawai-item-info">' +
+               '<div class="pegawai-item-nama">' + ndEsc(p.nama) + '</div>' +
+               '<div class="pegawai-item-jabatan">' + ndEsc(p.jabatan) + '</div>' +
+               '</div>' +
+               (selected ? '<span style="color:#3b82f6; font-size:18px;">&#10003;</span>' : '') +
+               '</div>';
+    }).join('');
+}
+
+function togglePegawai(index) {
+    var p = ndMaster[index];
     if (!p) return;
-    if (ndState.pegawai.some(x => x.id === p.id)) {
-        alert('Pegawai ini sudah ditambahkan.');
-        return;
-    }
-    ndState.pegawai.push(p);
-    sel.value = '';
-    ndRenderPegawaiTerpilih();
+    var i = -1;
+    for (var k=0;k<ndPegawai.length;k++) if (ndPegawai[k].id === p.id) { i=k; break; }
+    if (i >= 0) ndPegawai.splice(i,1); else ndPegawai.push(p);
+    renderPegawaiList(ndMaster);
+    renderTerpilih();
+}
+window.togglePegawai = togglePegawai;
+
+function renderTerpilih() {
+    var section = document.getElementById('terpilihSection');
+    var list    = document.getElementById('terpilihList');
+    var count   = document.getElementById('countTerpilih');
+    if (count) count.textContent = ndPegawai.length;
+    if (section) section.style.display = ndPegawai.length > 0 ? '' : 'none';
+    if (!list) return;
+    list.innerHTML = ndPegawai.map(function(p, i){
+        return '<div class="terpilih-item">' +
+               '<div class="terpilih-nama">' + ndEsc(p.nama) + '</div>' +
+               '<div class="terpilih-jabatan">' + ndEsc(p.jabatan) + '</div>' +
+               '<button class="btn-hapus-terpilih" onclick="hapusTerpilih(' + i + ')">&#10005;</button>' +
+               '</div>';
+    }).join('');
 }
 
-function ndHapusPegawai(idx) {
-    ndState.pegawai.splice(idx, 1);
-    ndRenderPegawaiTerpilih();
+function hapusTerpilih(index) {
+    ndPegawai.splice(index, 1);
+    renderPegawaiList(ndMaster);
+    renderTerpilih();
 }
+window.hapusTerpilih = hapusTerpilih;
 
-function ndRenderPegawaiTerpilih() {
-    const wrap = document.getElementById('ndDaftarPegawaiTerpilih');
-    if (!wrap) return;
-    if (ndState.pegawai.length === 0) {
-        wrap.innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:8px;">Belum ada pegawai dipilih.</div>';
-        return;
-    }
-    wrap.innerHTML = ndState.pegawai.map((p,i) => `
-        <div style="display:flex; justify-content:space-between; align-items:center;
-                    padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0;
-                    border-radius:8px; margin-bottom:6px;">
-            <div style="font-size:13px;">
-                <strong>${ndEsc(p.nama)}</strong>
-                <span style="color:#64748b;">${p.jabatan ? ' — '+ndEsc(p.jabatan) : ''}</span>
-            </div>
-            <button type="button" onclick="ndHapusPegawai(${i})"
-                style="background:#ef4444; color:#fff; border:none; border-radius:6px;
-                       padding:4px 10px; cursor:pointer; font-size:12px;">Hapus</button>
-        </div>
-    `).join('');
+function filterPegawaiPicker() {
+    var el = document.getElementById('searchPegawai');
+    var q = (el ? el.value : '').toLowerCase();
+    var filtered = ndMaster.filter(function(p){
+        return (p.nama||'').toLowerCase().indexOf(q) >= 0 ||
+               (p.jabatan||'').toLowerCase().indexOf(q) >= 0;
+    });
+    renderPegawaiList(filtered);
 }
+window.filterPegawaiPicker = filterPegawaiPicker;
 
 // ================================================================
-// FORM FIELDS
+// AMBIL DATA FORM
 // ================================================================
-function ndResetFormFields() {
-    ['ndNomor','ndTanggal','ndTglMulai','ndTglSelesai','ndMaksud','ndLokasi','ndPembebanan','ndDasar']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    const t = document.getElementById('ndTanggal');
-    if (t && !t.value) t.value = new Date().toISOString().slice(0,10);
-}
-
-function ndKumpulkanData() {
-    const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+function ndAmbilForm() {
+    var g = function(id){ var e=document.getElementById(id); return e ? e.value.trim() : ''; };
     return {
-        tipe: ndState.tipe,
-        jenis: ndState.jenis,
-        nomor: g('ndNomor'),
-        tanggal: g('ndTanggal'),
-        tgl_mulai: g('ndTglMulai'),
-        tgl_selesai: g('ndTglSelesai'),
-        maksud: g('ndMaksud'),
-        lokasi: g('ndLokasi'),
-        pembebanan: g('ndPembebanan'),
-        dasar: g('ndDasar'),
-        pegawai: ndState.pegawai.map(p => ({ id: p.id, nama: p.nama, jabatan: p.jabatan }))
+        tipe: ndTipe, kategori: ndKategori,
+        nomor:       g('nomorND'),
+        tanggal:     g('tanggalND'),
+        dasar:       g('dasarKeputusan'),
+        lokasi:      g('lokasiKeg'),
+        tgl_mulai:   g('tglMulai'),
+        tgl_selesai: g('tglSelesai'),
+        maksud:      g('maksudKeg'),
+        pembebanan:  g('pembebanan'),
+        pegawai: ndPegawai.map(function(p){ return { id:p.id, nama:p.nama, jabatan:p.jabatan }; })
     };
 }
 
 // ================================================================
-// SIMPAN KE DATABASE
+// SIMPAN
 // ================================================================
-async function ndSimpan() {
-    if (!ndState.tipe)  { alert('Pilih tipe Nota Dinas terlebih dahulu.'); return; }
-    if (!ndState.jenis) { alert('Pilih jenis Nota Dinas terlebih dahulu.'); return; }
-    if (ndState.pegawai.length === 0) { alert('Pilih minimal satu pegawai.'); return; }
+function simpanNotaDinas() {
+    if (!ndTipe)      { showAlert('Pilih jenis nota dinas terlebih dahulu (DD/LD).','error'); return; }
+    if (!ndKategori)  { showAlert('Pilih kategori nota dinas terlebih dahulu.','error'); return; }
+    if (ndPegawai.length === 0) { showAlert('Pilih minimal satu pegawai.','error'); return; }
 
-    const data = ndKumpulkanData();
-    try {
-        const res = await fetch('PHP/api_notadinas.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': ndCsrf()
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify(data)
-        });
-        const json = await res.json();
+    var btn = document.getElementById('btnSimpan');
+    if (btn) btn.disabled = true;
+    var st = document.getElementById('simpanStatus'); if (st) st.textContent = 'Menyimpan...';
+
+    fetch('PHP/api_notadinas.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': ndCsrf()
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(ndAmbilForm())
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(json){
+        if (btn) btn.disabled = false;
+        if (st) st.textContent = '';
         if (json.success) {
-            alert('Nota Dinas berhasil disimpan.');
+            showAlert('Nota Dinas berhasil disimpan.','success');
+            addRiwayat(ndAmbilForm());
         } else {
-            alert('Gagal menyimpan: ' + (json.error || 'kesalahan tidak diketahui'));
+            showAlert('Gagal menyimpan: ' + (json.error || 'kesalahan tidak diketahui'),'error');
         }
-    } catch (e) {
-        alert('Gagal menyimpan: ' + e.message);
-    }
+    })
+    .catch(function(e){
+        if (btn) btn.disabled = false;
+        if (st) st.textContent = '';
+        showAlert('Gagal menyimpan: ' + e.message,'error');
+    });
+}
+window.simpanNotaDinas = simpanNotaDinas;
+
+function showAlert(msg, tipe) {
+    var box = document.getElementById('alertBox');
+    if (!box) { alert(msg); return; }
+    box.textContent = msg;
+    box.className   = 'alert-box ' + tipe;
+    box.style.display = '';
+    if (tipe === 'success') setTimeout(function(){ box.style.display='none'; }, 3500);
 }
 
 // ================================================================
-// TOMBOL CETAK — TERPISAH PER JENIS
+// RIWAYAT (localStorage)
 // ================================================================
-function ndRenderTombolCetak() {
-    const wrap = document.getElementById('ndAreaCetak');
-    if (!wrap) return;
-    if (!ndState.jenis) { wrap.innerHTML = ''; return; }
-
-    const list = ND_JENIS[ndState.tipe] || [];
-    const jenis = list.find(j => j.key === ndState.jenis);
-    if (!jenis) { wrap.innerHTML = ''; return; }
-
-    // tombol cetak khusus jenis yang sedang aktif (tidak digabung)
-    wrap.innerHTML = `
-        <div style="margin-top:15px; padding:12px; background:#f0f9ff;
-                    border:1px solid #bae6fd; border-radius:8px;">
-            <div style="font-size:13px; color:#0369a1; margin-bottom:8px;">
-                Cetak Nota Dinas — <strong>${ndEsc(jenis.label)} ${ndState.tipe}</strong>
-            </div>
-            <button type="button" class="nav-btn"
-                style="background:#0284c7; color:#fff; border-color:#0284c7; padding:10px 22px;"
-                onclick="ndCetak()">🖨️ Cetak ${ndEsc(jenis.label)}</button>
-        </div>
-    `;
+function addRiwayat(data) {
+    var rows = JSON.parse(localStorage.getItem('nd_riwayat') || '[]');
+    rows.unshift({
+        tipe: data.tipe, kategori: data.kategori,
+        nomor: data.nomor, tanggal: data.tanggal,
+        pegawai: data.pegawai || []
+    });
+    if (rows.length > 50) rows = rows.slice(0, 50);
+    localStorage.setItem('nd_riwayat', JSON.stringify(rows));
+    loadRiwayatNotaDinas();
 }
 
-function ndCetak() {
-    if (!ndState.jenis) { alert('Pilih jenis Nota Dinas terlebih dahulu.'); return; }
-    if (ndState.pegawai.length === 0) { alert('Pilih minimal satu pegawai.'); return; }
-
-    const list = ND_JENIS[ndState.tipe] || [];
-    const jenis = list.find(j => j.key === ndState.jenis);
-    if (!jenis) return;
-
-    const data = ndKumpulkanData();
-    const template = document.getElementById('printTemplate');
-    if (!template) { alert('Template cetak tidak ditemukan.'); return; }
-
-    const fn = window[jenis.cetak];
-    if (typeof fn !== 'function') {
-        alert('Fungsi cetak "' + jenis.cetak + '" belum tersedia.');
+function loadRiwayatNotaDinas() {
+    var rows = JSON.parse(localStorage.getItem('nd_riwayat') || '[]');
+    var body = document.getElementById('notaDinasBody');
+    if (!body) return;
+    if (rows.length === 0) {
+        body.innerHTML = '<tr><td colspan="7" style="padding:20px; text-align:center; color:#94a3b8;">Belum ada nota dinas tersimpan.</td></tr>';
         return;
     }
-
-    fn(data, template);
-    setTimeout(() => window.print(), 300);
+    body.innerHTML = rows.map(function(r, i){
+        var nama = (r.pegawai || []).map(function(p){ return p.nama; }).join(', ');
+        if (nama.length > 40) nama = nama.substring(0,40) + '…';
+        return '<tr style="border-bottom:1px solid #f1f5f9;">' +
+               '<td style="padding:10px 12px;">' + (i+1) + '</td>' +
+               '<td style="padding:10px 12px;"><span class="kategori-badge ' + ndEsc(r.tipe) + '">' + ndEsc(r.tipe) + '</span></td>' +
+               '<td style="padding:10px 12px;">' + ndEsc(ND_LABEL[r.kategori] || r.kategori || '-') + '</td>' +
+               '<td style="padding:10px 12px;">' + ndEsc(r.nomor || '-') + '</td>' +
+               '<td style="padding:10px 12px;">' + ndEsc(r.tanggal || '-') + '</td>' +
+               '<td style="padding:10px 12px;">' + ndEsc(nama || '-') + '</td>' +
+               '<td style="padding:10px 12px;">' +
+               '<button onclick="hapusRiwayat(' + i + ')" style="background:#ef4444; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">&#128465;</button>' +
+               '</td></tr>';
+    }).join('');
 }
 
+function hapusRiwayat(idx) {
+    var rows = JSON.parse(localStorage.getItem('nd_riwayat') || '[]');
+    rows.splice(idx, 1);
+    localStorage.setItem('nd_riwayat', JSON.stringify(rows));
+    loadRiwayatNotaDinas();
+}
+window.hapusRiwayat = hapusRiwayat;
+
 // ================================================================
-// EKSPOR KE WINDOW
+// CETAK — tombol TERPISAH per kategori (tidak digabung)
 // ================================================================
-window.ndPilihTipe        = ndPilihTipe;
-window.ndPilihJenis       = ndPilihJenis;
-window.ndTambahPegawai    = ndTambahPegawai;
-window.ndHapusPegawai     = ndHapusPegawai;
-window.ndSimpan           = ndSimpan;
-window.ndCetak            = ndCetak;
-window.ndRenderTombolCetak = ndRenderTombolCetak;
+function ndCetak(fnName) {
+    if (!ndKategori) { showAlert('Pilih kategori nota dinas terlebih dahulu.','error'); return; }
+    if (ndPegawai.length === 0) { showAlert('Pilih minimal satu pegawai.','error'); return; }
+
+    var fn = window[fnName];
+    if (typeof fn !== 'function') { alert('Fungsi cetak "' + fnName + '" belum tersedia.'); return; }
+
+    addRiwayat(ndAmbilForm());
+
+    var template = document.getElementById('printTemplate');
+    if (!template) { alert('Template cetak tidak ditemukan.'); return; }
+    template.innerHTML = '';
+    fn(ndAmbilForm(), template);
+    setTimeout(function(){ window.print(); }, 300);
+}
+
+function cetakNotadinasSosper()    { ndCetak('cetakLayoutSosper'); }
+function cetakNotadinasSosrev()    { ndCetak('cetakLayoutSosrev'); }
+function cetakNotadinasKomisi()    { ndCetak('cetakLayoutKomisi'); }
+function cetakNotadinasKetua()     { ndCetak('cetakLayoutKetua'); }
+function cetakNotadinasUndangan()  { ndCetak('cetakLayoutUndangan'); }
+function cetakNotadinasKomparasi() { ndCetak('cetakLayoutKomparasi'); }
+function cetakNotadinasPansus()    { ndCetak('cetakLayoutPansus'); }
+
+window.cetakNotadinasSosper    = cetakNotadinasSosper;
+window.cetakNotadinasSosrev    = cetakNotadinasSosrev;
+window.cetakNotadinasKomisi    = cetakNotadinasKomisi;
+window.cetakNotadinasKetua     = cetakNotadinasKetua;
+window.cetakNotadinasUndangan  = cetakNotadinasUndangan;
+window.cetakNotadinasKomparasi = cetakNotadinasKomparasi;
+window.cetakNotadinasPansus    = cetakNotadinasPansus;
