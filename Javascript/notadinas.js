@@ -59,22 +59,46 @@ function pilihJenis(tipe) {
     ndKategori = null;
     ndPegawai  = [];
 
-    var hide = function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; };
-    hide('kategoriDD'); hide('kategoriLD'); hide('formSection');
-    hide('pegawaiSection'); hide('aksiSection'); hide('labelTerpilih');
-
-    var cd = document.getElementById('cardDD');
-    var cl = document.getElementById('cardLD');
-    if (cd) cd.classList.toggle('active', tipe === 'DD');
-    if (cl) cl.classList.toggle('active', tipe === 'LD');
-
-    var grid = document.getElementById('kategori' + tipe);
-    if (grid) grid.style.display = '';
-
+    // Reset UI
+    ['formSection','pegawaiSection','aksiSection','labelTerpilih'].forEach(function(id){
+        var e = document.getElementById(id); if(e) e.style.display = 'none';
+    });
     var badge = document.getElementById('badgeJenis');
     if (badge) { badge.textContent = ''; badge.className = 'kategori-badge'; }
     var lbl = document.getElementById('labelKategori');
     if (lbl) lbl.textContent = '';
+
+    // Tampilkan dropdown kategori + isi option sesuai tipe
+    var wrap  = document.getElementById('kategoriWrapper');
+    var sel   = document.getElementById('selectKategori');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Pilih Jenis Nota Dinas --</option>';
+
+    var options = {
+        DD: [
+            {value:'sosper',       label:'&#127891; Sosper DD'},
+            {value:'komisi_dd',     label:'&#128101; Komisi DD'},
+            {value:'keg_ketua_dd',  label:'&#127968; Keg. Ketua DD'},
+            {value:'undangan_dd',   label:'&#128236; Undangan DD'},
+            {value:'komparasi_dd',  label:'&#128202; Komparasi DD'},
+        ],
+        LD: [
+            {value:'sosrev',        label:'&#128227; SOSREV LD'},
+            {value:'komisi_ld',     label:'&#128101; Komisi LD'},
+            {value:'keg_ketua_ld',  label:'&#127968; Keg. Ketua LD'},
+            {value:'undangan_ld',   label:'&#128236; Undangan LD'},
+            {value:'komparasi_ld',  label:'&#128202; Komparasi LD'},
+            {value:'pansus_ld',     label:'&#128209; Pansus LD'},
+        ]
+    };
+
+    var opts = options[tipe] || [];
+    opts.forEach(function(o){
+        sel.innerHTML += '<option value="'+ o.value +'|'+ tipe +'">'+ o.label +'</option>';
+    });
+
+    if (wrap) wrap.style.display = '';
+    sel.value = '';
 }
 window.pilihJenis = pilihJenis;
 
@@ -82,40 +106,34 @@ window.pilihJenis = pilihJenis;
 // LANGKAH 2: PILIH KATEGORI
 // ================================================================
 var ND_LABEL = {
-    sosper:'Sosper', sosrev:'Sosrev', komisi_dd:'Komisi DD', komisi_ld:'Komisi LD',
+    sosper:'Sosper DD', sosrev:'SOSREV LD', komisi_dd:'Komisi DD', komisi_ld:'Komisi LD',
     keg_ketua_dd:'Keg. Ketua DD', keg_ketua_ld:'Keg. Ketua LD',
     undangan_dd:'Undangan DD', undangan_ld:'Undangan LD',
     komparasi_dd:'Komparasi DD', komparasi_ld:'Komparasi LD', pansus_ld:'Pansus LD'
 };
 
-function pilihKategori(key, tipe) {
+function pilihKategori(val) {
+    if (!val) return;
+    var parts = val.split('|');
+    var key   = parts[0];
+    var tipe  = parts[1];
     ndKategori = key;
     ndPegawai  = [];
 
-    document.querySelectorAll('.kategori-grid .kategori-card').forEach(function(el){
-        el.classList.remove('active');
-    });
-    var el = document.getElementById('kat-' + key);
-    if (el) el.classList.add('active');
-
     var badge = document.getElementById('badgeJenis');
-    if (badge) {
-        badge.textContent = ndTipe;
-        badge.className   = 'kategori-badge ' + ndTipe;
-    }
+    if (badge) { badge.textContent = tipe; badge.className = 'kategori-badge ' + tipe; }
     var lbl = document.getElementById('labelKategori');
     if (lbl) lbl.textContent = '— ' + (ND_LABEL[key] || key);
     var lt = document.getElementById('labelTerpilih');
     if (lt) lt.style.display = '';
 
-    var fs = document.getElementById('formSection');    if (fs) fs.style.display = '';
-    var ps = document.getElementById('pegawaiSection'); if (ps) ps.style.display = '';
-    var as = document.getElementById('aksiSection');    if (as) as.style.display = '';
+    ['formSection','pegawaiSection','aksiSection'].forEach(function(id){
+        var e = document.getElementById(id); if(e) e.style.display = '';
+    });
 
     renderTerpilih();
     renderPegawaiList(ndMaster);
 
-    // TAMPILKAN HANYA TOMBOL CETAK UNTUK KATEGORI INI (terpisah)
     var map = {
         sosper:'btnCetakSosper', sosrev:'btnCetakSosrev',
         komisi_dd:'btnCetakKomisi', komisi_ld:'btnCetakKomisi',
@@ -124,7 +142,7 @@ function pilihKategori(key, tipe) {
         komparasi_dd:'btnCetakKomparasi', komparasi_ld:'btnCetakKomparasi',
         pansus_ld:'btnCetakPansus'
     };
-    var showId = map[key];
+    var showId = map[key] || null;
     ['btnCetakSosper','btnCetakSosrev','btnCetakKomisi','btnCetakKetua',
      'btnCetakUndangan','btnCetakKomparasi','btnCetakPansus'].forEach(function(id){
         var b = document.getElementById(id);
@@ -132,6 +150,7 @@ function pilihKategori(key, tipe) {
     });
 }
 window.pilihKategori = pilihKategori;
+
 
 // ================================================================
 // PEGAWAI PICKER — pilih dari daftar pegawai yang ada

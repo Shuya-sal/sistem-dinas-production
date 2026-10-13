@@ -56,81 +56,37 @@
         .step-4 .num { background: #475569; }
 
         /* ============================================================
-           TIPE PICKER — DD / LD (tombol besar, jelas)
+           SELECT JENIS & KATEGORI — mengikuti gaya form penugasan
            ============================================================ */
-        .tipe-picker {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .tipe-card {
-            flex: 1;
-            min-width: 180px;
-            padding: 18px 16px;
-            border-radius: 10px;
-            border: 2px solid #cbd5e1;
-            background: #ffffff;
-            cursor: pointer;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 700;
-            color: #475569;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            user-select: none;
-        }
-        .tipe-card:hover {
-            border-color: #3b82f6;
-            background: #eff6ff;
-            color: #1d4ed8;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.2);
-        }
-        .tipe-card.active {
-            border-color: #2563eb;
-            background: #2563eb;
-            color: #ffffff;
-            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
-        }
-        .tipe-card .icon { font-size: 26px; display: block; margin-bottom: 6px; line-height: 1; }
-
-        /* ============================================================
-           KATEGORI GRID (muncul setelah DD/LD dipilih)
-           ============================================================ */
-        .kategori-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .kategori-card {
-            padding: 14px 10px;
-            border: 2px solid #e2e8f0;
+        .nd-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
+            font-size: 14px;
             background: #ffffff;
-            text-align: center;
+            transition: all 0.2s ease;
+            color: #0f172a;
+            font-family: inherit;
             cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            transition: all 0.18s ease;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-            user-select: none;
         }
-        .kategori-card:hover {
+        .nd-select:focus {
+            outline: none;
             border-color: #3b82f6;
-            background: #eff6ff;
-            color: #1d4ed8;
-            transform: translateY(-1px);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
-        .kategori-card.active {
-            border-color: #2563eb;
-            background: #2563eb;
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        .nd-select:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            border-color: #cbd5e1;
         }
-        .kategori-card .icon { font-size: 20px; display: block; margin-bottom: 4px; line-height: 1; }
+        .nd-select-strong {
+            font-weight: bold;
+            color: #1e293b;
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+        }
 
         /* BADGE */
         .kategori-badge {
@@ -308,63 +264,22 @@
                 <span class="num">1</span> Pilih Jenis Nota Dinas
             </h3>
 
-            <!-- DD / LD -->
-            <div class="tipe-picker">
-                <div class="tipe-card" id="cardDD" onclick="pilihJenis('DD')">
-                    <span class="icon">&#128293;</span>
-                    Dalam Daerah (DD)
-                </div>
-                <div class="tipe-card" id="cardLD" onclick="pilihJenis('LD')">
-                    <span class="icon">&#9992;&#65039;</span>
-                    Luar Daerah (LD)
-                </div>
+            <!-- TIPE: DD / LD — pakai SELECT seperti penugasan -->
+            <div class="form-group">
+                <label for="selectTipe">Tipe Nota Dinas:</label>
+                <select id="selectTipe" class="nd-select nd-select-strong" onchange="pilihJenis(this.value)">
+                    <option value="">-- Pilih Tipe (DD / LD) --</option>
+                    <option value="DD">&#128293; Dalam Daerah (DD)</option>
+                    <option value="LD">&#9992;&#65039; Luar Daerah (LD)</option>
+                </select>
             </div>
 
-            <!-- KATEGORI DD -->
-            <div id="kategoriDD" style="display:none;">
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Pilih kategori:</p>
-                <div class="kategori-grid">
-                    <div class="kategori-card" onclick="pilihKategori('sosper','DD')" id="kat-sosper">
-                        <span class="icon">&#127891;</span>Sosper
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('sosrev','DD')" id="kat-sosrev">
-                        <span class="icon">&#128227;</span>Sosrev
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('komisi_dd','DD')" id="kat-komisi_dd">
-                        <span class="icon">&#128101;</span>Komisi DD
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('keg_ketua_dd','DD')" id="kat-keg_ketua_dd">
-                        <span class="icon">&#127968;</span>Keg. Ketua
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('undangan_dd','DD')" id="kat-undangan_dd">
-                        <span class="icon">&#128236;</span>Undangan
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('komparasi_dd','DD')" id="kat-komparasi_dd">
-                        <span class="icon">&#128202;</span>Komparasi
-                    </div>
-                </div>
-            </div>
-
-            <!-- KATEGORI LD -->
-            <div id="kategoriLD" style="display:none;">
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Pilih kategori:</p>
-                <div class="kategori-grid">
-                    <div class="kategori-card" onclick="pilihKategori('komisi_ld','LD')" id="kat-komisi_ld">
-                        <span class="icon">&#128101;</span>Komisi LD
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('pansus_ld','LD')" id="kat-pansus_ld">
-                        <span class="icon">&#128209;</span>Pansus LD
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('keg_ketua_ld','LD')" id="kat-keg_ketua_ld">
-                        <span class="icon">&#127968;</span>Keg. Ketua
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('undangan_ld','LD')" id="kat-undangan_ld">
-                        <span class="icon">&#128236;</span>Undangan
-                    </div>
-                    <div class="kategori-card" onclick="pilihKategori('komparasi_ld','LD')" id="kat-komparasi_ld">
-                        <span class="icon">&#128202;</span>Komparasi
-                    </div>
-                </div>
+            <!-- KATEGORI — muncul setelah pilih tipe -->
+            <div id="kategoriWrapper" class="form-group" style="display:none;">
+                <label for="selectKategori">Jenis Nota Dinas:</label>
+                <select id="selectKategori" class="nd-select nd-select-strong" onchange="pilihKategori(this.value)">
+                    <option value="">-- Pilih Jenis Nota Dinas --</option>
+                </select>
             </div>
 
             <!-- LABEL TERPILIH -->
