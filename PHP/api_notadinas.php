@@ -44,6 +44,7 @@ $conn->query("
         tgl_selesai DATE DEFAULT NULL,
         pembebanan VARCHAR(255) DEFAULT '',
         pegawai_json TEXT,
+        grup_json TEXT,
         created_by VARCHAR(50) DEFAULT '',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -90,6 +91,10 @@ if ($method === 'POST') {
         $tgl_selesai = trim($data['tgl_selesai'] ?? '');
         $pembebanan  = trim($data['pembebanan'] ?? '');
         $pegawai_json = trim($data['pegawai_json'] ?? '[]');
+        if ($pegawai_json === '' || $pegawai_json === '[]') {
+            $pegawai_json = json_encode($data['pegawai'] ?? [], JSON_UNESCAPED_UNICODE);
+        }
+        $grup_json = json_encode($data['grup'] ?? [], JSON_UNESCAPED_UNICODE);
         $created_by  = $_SESSION['pegawai_id'];
 
         if ($id === '') {
@@ -110,21 +115,21 @@ if ($method === 'POST') {
         if ($ada) {
             $sql = "UPDATE nota_dinas SET
                 jenis=?, kategori=?, nomor=?, tanggal=?, dasar=?, maksud=?,
-                lokasi=?, tgl_mulai=?, tgl_selesai=?, pembebanan=?, pegawai_json=?
+                lokasi=?, tgl_mulai=?, tgl_selesai=?, pembebanan=?, pegawai_json=?, grup_json=?
                 WHERE id=?";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssssssssssss",
+            $stmt->bind_param("sssssssssssss",
                 $jenis, $kategori, $nomor, $tanggal, $dasar, $maksud,
-                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan, $pegawai_json, $id
+                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan, $pegawai_json, $grup_json, $id
             );
         } else {
             $sql = "INSERT INTO nota_dinas
-                (id,jenis,kategori,nomor,tanggal,dasar,maksud,lokasi,tgl_mulai,tgl_selesai,pembebanan,pegawai_json,created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                (id,jenis,kategori,nomor,tanggal,dasar,maksud,lokasi,tgl_mulai,tgl_selesai,pembebanan,pegawai_json,grup_json,created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssssssssss",
+            $stmt->bind_param("ssssssssssssss",
                 $id, $jenis, $kategori, $nomor, $tanggal, $dasar, $maksud,
-                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan, $pegawai_json, $created_by
+                $lokasi, $tgl_mulai, $tgl_selesai, $pembebanan, $pegawai_json, $grup_json, $created_by
             );
         }
 

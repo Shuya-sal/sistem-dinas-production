@@ -18,9 +18,7 @@ function cetakLayoutKomisi(data, template) {
         return fmt(a)+' s/d '+fmt(b);
     };
     const kop = typeof window.getKopSuratStandar === 'function' ? window.getKopSuratStandar() : '';
-    const pegHtml = data.pegawai.map((p,i) =>
-        '<tr><td style="width:30px; text-align:center;">'+(i+1)+'.</td><td>'+escHtml(p.nama)+'</td><td style="width:200px;">'+escHtml(p.jabatan||'-')+'</td></tr>'
-    ).join('');
+    const blokGrup = window.ndBlokGrup(data);
     template.innerHTML = `
         ${kop}
         <div style="text-align:center; margin-top:10px; margin-bottom:15px;">
@@ -37,9 +35,7 @@ function cetakLayoutKomisi(data, template) {
         <div style="font-size:14px; font-family:'Times New Roman',Times,serif; line-height:1.4; text-align:justify;">
             <p style="margin-bottom:8px;">${escHtml(data.dasar||'(Dasar Keputusan Pimpinan)')}</p>
             <p style="margin-bottom:8px;">Sehubungan dengan hal tersebut, mohon diikutsertakan:</p>
-            <table style="width:100%; font-size:13px; border-collapse:collapse; margin-bottom:10px; font-family:'Times New Roman',Times,serif;">
-                ${pegHtml}
-            </table>
+            ${blokGrup}
             <p style="margin-bottom:8px;">Untuk melakukan <strong>${escHtml(data.maksud||'-')}</strong> tanggal ${fmtRentang(data.tgl_mulai, data.tgl_selesai)} ${data.lokasi ? 'di '+escHtml(data.lokasi) : ''}. Pembebanan biaya pada ${escHtml(data.pembebanan||'-')}.</p>
             <p style="margin-bottom:8px;">Demikian disampaikan atas perhatian dan perkenan Bapak kami ucapkan terima kasih.</p>
         </div>

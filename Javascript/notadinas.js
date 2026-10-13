@@ -46,10 +46,180 @@ function initNotaDinasSPA() {
     var tglEl = document.getElementById('tanggalND');
     if (tglEl && !tglEl.value) tglEl.value = new Date().toISOString().slice(0,10);
 
-    loadDaftarPegawai();
+    // Init TomSelect multi-select (sama seperti penugasan)
+    initTomSelectPegawai();
     loadRiwayatNotaDinas();
 }
 window.initNotaDinasSPA = initNotaDinasSPA;
+
+var ndTomSelect = null;
+
+function initTomSelectPegawai() {
+    if (typeof TomSelect === 'undefined') {
+        setTimeout(initTomSelectPegawai, 300);
+        return;
+    }
+    fetch('PHP/api_pegawai.php', {
+        headers: { 'X-CSRF-Token': ndCsrf() },
+        credentials: 'same-origin'
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(json){
+        var list = Array.isArray(json) ? json : (json.data || []);
+        ndMaster = list.map(function(p){
+            return {
+                id: String(p.id || p.pegawai_id),
+                nama: p.nama || p.nama_pegawai || '',
+                nip: p.nip || '',
+                jabatan: p.jabatan || p.nama_jabatan || '',
+                foto: p.foto || p.foto_url || 'Image/default.jpg'
+            };
+        });
+        // Inisialisasi ulang semua select yang sudah ada
+        document.querySelectorAll('.petugas-select').forEach(function(sel){
+            buatTomSelect(sel);
+        });
+        renderRingkasan();
+    })
+    .catch(function(){});
+}
+
+// Buat TomSelect pada satu elemen <select class="petugas-select">
+function buatTomSelect(sel) {
+    if (typeof TomSelect === 'undefined') return;
+    if (sel._ts) { try { sel._ts.destroy(); } catch(e){} }
+    sel.innerHTML = '';
+    ndMaster.forEach(function(p){
+        var label = p.nama + (p.jabatan ? ' — ' + p.jabatan : '') + (p.nip ? ' (' + p.nip + ')' : '');
+        sel.innerHTML += '<option value="' + ndEsc(p.id) + '">' + ndEsc(label) + '</option>';
+    });
+    sel._ts = new TomSelect(sel, {
+        plugins: ['remove_button'],
+        create: false,
+        maxItems: null,
+        sortField: { field: 'text', direction: 'asc' },
+        placeholder: '-- Ketik Nama atau NIP Petugas --',
+        onChange: function(){ renderRingkasan(); }
+    });
+}
+
+// ---------- GRUP PEMIMPIN ----------
+function tambahGrupPemimpin() {
+    var wrap = document.getElementById('grupPemimpinWrap');
+    if (!wrap) return;
+    var no = wrap.querySelectorAll('.grup-pemimpin').length + 1;
+    var div = document.createElement('div');
+    div.className = 'grup-pemimpin';
+    div.innerHTML =
+        '<div class="grup-pemimpin-head">' +
+            '<div class="grup-pemimpin-title">' +
+                '<span class="grup-pemimpin-no">' + no + '</span>' +
+                'Kegiatan / Pemimpin yang Diikuti' +
+            '</div>' +
+            '<button type="button" class="btn-hapus-grup" onclick="hapusGrupPemimpin(this)">&#10005; Hapus</button>' +
+        '</div>' +
+        '<div class="form-group">' +
+            '<label>Yang Diikuti / Diliput <span style="color:red">*</span></label>' +
+            '<input type="text" class="input-pemimpin" placeholder="Contoh: Ketua DPRD Supian HK" oninput="renderRingkasan()">' +
+        '</div>' +
+        '<div class="form-group">' +
+            '<label>Tujuan / Lokasi Kegiatan</label>' +
+            '<input type="text" class="input-tujuan-grup" placeholder="Contoh: Kabupaten Tanah Bumbu" oninput="renderRingkasan()">' +
+        '</div>' +
+        '<div class="petugas-wrap">' +
+            '<span class="petugas-label">Petugas yang Meliput / Ditugaskan:</span>' +
+            '<div class="petugas-list"></div>' +
+            '<button type="button" class="btn-tambah-petugas" onclick="tambahPetugas(this)">' +
+                '&#10133; Tambahkan Petugas' +
+            '</button>' +
+        '</div>';
+    wrap.appendChild(div);
+    renderRingkasan();
+}
+window.tambahGrupPemimpin = tambahGrupPemimpin;
+
+function hapusGrupPemimpin(btn) {
+    var grup = btn.closest('.grup-pemimpin');
+    if (grup) grup.remove();
+    var wrap = document.getElementById('grupPemimpinWrap');
+    if (wrap) {
+        wrap.querySelectorAll('.grup-pemimpin').forEach(function(g, i){
+            var n = g.querySelector('.grup-pemimpin-no');
+            if (n) n.textContent = i + 1;
+        });
+    }
+    renderRingkasan();
+}
+window.hapusGrupPemimpin = hapusGrupPemimpin;
+
+// ---------- PETUGAS (TomSelect multi) ----------
+function tambahPetugas(btn) {
+    var wrapEl = btn.closest('.petugas-wrap');
+    var listEl = wrapEl.querySelector('.petugas-list');
+
+    var blok = document.createElement('div');
+    blok.style.marginBottom = '8px';
+    blok.innerHTML = '<select class="petugas-select" multiple placeholder="-- Ketik Nama atau NIP Petugas --"></select>';
+    listEl.appendChild(blok);
+
+    var sel = blok.querySelector('select');
+    buatTomSelect(sel);
+}
+window.tambahPetugas = tambahPetugas;
+
+// ---------- AMBIL DATA GRUP ----------
+function ndAmbilGrup() {
+    var wrap = document.getElementById('grupPemimpinWrap');
+    if (!wrap) return [];
+    var hasil = [];
+    wrap.querySelectorAll('.grup-pemimpin').forEach(function(g){
+        var pemimpin = (g.querySelector('.input-pemimpin') || {}).value || '';
+        var tujuan   = (g.querySelector('.input-tujuan-grup') || {}).value || '';
+        var petugas  = [];
+        g.querySelectorAll('.petugas-select').forEach(function(sel){
+            if (sel._ts) {
+                sel._ts.items.forEach(function(v){
+                    var p = ndMaster.find(function(x){ return x.id === String(v); });
+                    if (p) petugas.push({ id:p.id, nama:p.nama, jabatan:p.jabatan, nip:p.nip });
+                });
+            }
+        });
+        if (pemimpin.trim() || petugas.length) {
+            hasil.push({ pemimpin: pemimpin.trim(), tujuan: tujuan.trim(), petugas: petugas });
+        }
+    });
+    return hasil;
+}
+
+// ---------- RINGKASAN ----------
+function renderRingkasan() {
+    var grup = ndAmbilGrup();
+    var section = document.getElementById('terpilihSection');
+    var list = document.getElementById('terpilihList');
+    if (!section || !list) return;
+
+    // Update ndPegawai (gabungan semua petugas) untuk kompatibilitas simpan/cetak
+    ndPegawai = [];
+    grup.forEach(function(g){
+        g.petugas.forEach(function(p){
+            if (!ndPegawai.some(function(x){ return x.id === p.id; })) ndPegawai.push(p);
+        });
+    });
+
+    if (grup.length === 0) { section.style.display = 'none'; list.innerHTML = ''; return; }
+    section.style.display = '';
+    list.innerHTML = grup.map(function(g, i){
+        var namaPetugas = g.petugas.length
+            ? g.petugas.map(function(p){ return p.nama; }).join(', ')
+            : '<i style="color:#dc2626">Belum ada petugas</i>';
+        return '<div class="ringkas-item">' +
+               '<div class="judul">' + (i+1) + '. ' + ndEsc(g.pemimpin || '(belum diisi)') +
+                 (g.tujuan ? ' &rarr; ' + ndEsc(g.tujuan) : '') + '</div>' +
+               '<div class="petugas-teks">Petugas: ' + (typeof namaPetugas === 'string' ? ndEsc(namaPetugas) : namaPetugas) + '</div>' +
+               '</div>';
+    }).join('');
+}
+window.renderRingkasan = renderRingkasan;
 
 // ================================================================
 // LANGKAH 1: PILIH TIPE (DD / LD)
@@ -131,8 +301,12 @@ function pilihKategori(val) {
         var e = document.getElementById(id); if(e) e.style.display = '';
     });
 
-    renderTerpilih();
-    renderPegawaiList(ndMaster);
+    // Siapkan grup pemimpin pertama (jika belum ada)
+    var wrap = document.getElementById('grupPemimpinWrap');
+    if (wrap && wrap.querySelectorAll('.grup-pemimpin').length === 0) {
+        tambahGrupPemimpin();
+    }
+    renderRingkasan();
 
     var map = {
         sosper:'btnCetakSosper', sosrev:'btnCetakSosrev',
@@ -152,104 +326,11 @@ function pilihKategori(val) {
 window.pilihKategori = pilihKategori;
 
 
-// ================================================================
-// PEGAWAI PICKER — pilih dari daftar pegawai yang ada
-// ================================================================
-function loadDaftarPegawai() {
-    fetch('PHP/api_pegawai.php', {
-        headers: { 'X-CSRF-Token': ndCsrf() },
-        credentials: 'same-origin'
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(json){
-        var list = Array.isArray(json) ? json : (json.data || []);
-        ndMaster = list.map(function(p){
-            return {
-                id: p.id || p.pegawai_id,
-                nama: p.nama || p.nama_pegawai || '',
-                jabatan: p.jabatan || p.nama_jabatan || '',
-                foto: p.foto || p.foto_url || 'Image/default.jpg'
-            };
-        });
-        var cp = document.getElementById('countPegawai');
-        if (cp) cp.textContent = ndMaster.length + ' orang';
-        renderPegawaiList(ndMaster);
-    })
-    .catch(function(){
-        var cp = document.getElementById('countPegawai');
-        if (cp) cp.textContent = 'Gagal memuat';
-    });
-}
 
-function renderPegawaiList(list) {
-    var container = document.getElementById('pegawaiList');
-    if (!container) return;
-    if (!list || list.length === 0) {
-        container.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px; grid-column:1/-1;">Tidak ada pegawai ditemukan.</div>';
-        return;
-    }
-    container.innerHTML = list.map(function(p){
-        var selected = ndPegawai.some(function(x){ return x.id === p.id; });
-        var idx = ndMaster.indexOf(p);
-        var foto = p.foto || 'Image/default.jpg';
-        return '<div class="pegawai-item' + (selected ? ' selected' : '') + '" ' +
-               'onclick="togglePegawai(' + idx + ')">' +
-               '<img src="' + ndEsc(foto) + '" alt="Foto ' + ndEsc(p.nama) + '" ' +
-               'loading="lazy" width="44" height="44" ' +
-               'onerror="this.onerror=null;this.src=\'Image/default.jpg\'">' +
-               '<div class="pegawai-item-info">' +
-               '<div class="pegawai-item-nama">' + ndEsc(p.nama) + '</div>' +
-               '<div class="pegawai-item-jabatan">' + ndEsc(p.jabatan) + '</div>' +
-               '</div>' +
-               (selected ? '<span class="cek">&#10003;</span>' : '') +
-               '</div>';
-    }).join('');
-}
 
-function togglePegawai(index) {
-    var p = ndMaster[index];
-    if (!p) return;
-    var i = -1;
-    for (var k=0;k<ndPegawai.length;k++) if (ndPegawai[k].id === p.id) { i=k; break; }
-    if (i >= 0) ndPegawai.splice(i,1); else ndPegawai.push(p);
-    renderPegawaiList(ndMaster);
-    renderTerpilih();
-}
-window.togglePegawai = togglePegawai;
 
-function renderTerpilih() {
-    var section = document.getElementById('terpilihSection');
-    var list    = document.getElementById('terpilihList');
-    var count   = document.getElementById('countTerpilih');
-    if (count) count.textContent = ndPegawai.length;
-    if (section) section.style.display = ndPegawai.length > 0 ? '' : 'none';
-    if (!list) return;
-    list.innerHTML = ndPegawai.map(function(p, i){
-        return '<div class="terpilih-item">' +
-               '<div class="terpilih-nama">' + ndEsc(p.nama) + '</div>' +
-               '<div class="terpilih-jabatan">' + ndEsc(p.jabatan) + '</div>' +
-               '<button class="btn-hapus-terpilih" onclick="hapusTerpilih(' + i + ')">&#10005;</button>' +
-               '</div>';
-    }).join('');
-}
 
-function hapusTerpilih(index) {
-    ndPegawai.splice(index, 1);
-    renderPegawaiList(ndMaster);
-    renderTerpilih();
-}
-window.hapusTerpilih = hapusTerpilih;
 
-function filterPegawaiPicker() {
-    var el = document.getElementById('searchPegawai');
-    var q = (el ? el.value : '').toLowerCase();
-    var filtered = ndMaster.filter(function(p){
-        return (p.nama||'').toLowerCase().indexOf(q) >= 0 ||
-               (p.jabatan||'').toLowerCase().indexOf(q) >= 0;
-    });
-    renderPegawaiList(filtered);
-}
-window.filterPegawaiPicker = filterPegawaiPicker;
 
 // ================================================================
 // AMBIL DATA FORM
@@ -266,7 +347,8 @@ function ndAmbilForm() {
         tgl_selesai: g('tglSelesai'),
         maksud:      g('maksudKeg'),
         pembebanan:  g('pembebanan'),
-        pegawai: ndPegawai.map(function(p){ return { id:p.id, nama:p.nama, jabatan:p.jabatan }; })
+        pegawai: ndPegawai.map(function(p){ return { id:p.id, nama:p.nama, jabatan:p.jabatan }; }),
+        grup: ndAmbilGrup()
     };
 }
 
@@ -276,7 +358,11 @@ function ndAmbilForm() {
 function simpanNotaDinas() {
     if (!ndTipe)      { showAlert('Pilih jenis nota dinas terlebih dahulu (DD/LD).','error'); return; }
     if (!ndKategori)  { showAlert('Pilih kategori nota dinas terlebih dahulu.','error'); return; }
-    if (ndPegawai.length === 0) { showAlert('Pilih minimal satu pegawai.','error'); return; }
+    var grup = ndAmbilGrup();
+    if (grup.length === 0) { showAlert('Tambahkan minimal satu pemimpin/kegiatan yang diikuti.','error'); return; }
+    if (!grup.some(function(g){ return g.petugas.length > 0; })) {
+        showAlert('Tambahkan minimal satu petugas yang meliput.','error'); return;
+    }
 
     var btn = document.getElementById('btnSimpan');
     if (btn) btn.disabled = true;

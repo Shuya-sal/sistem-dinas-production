@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Nota Dinas - Sistem Dinas</title>
     <link rel="stylesheet" href="CSS/style.css?v=15">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
     <style>
         /* ================= ANIMASI TITIK ONLINE ================= */
         .online-dot {
@@ -189,6 +190,125 @@
             color: #3b82f6; font-size: 16px; flex-shrink: 0; font-weight: 700;
         }
 
+        /* ============================================================
+           GRUP PEMIMPIN + PETUGAS (alur bertingkat)
+           ============================================================ */
+        .grup-pemimpin {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 14px;
+            background: #f8fafc;
+            position: relative;
+        }
+        .grup-pemimpin-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+        .grup-pemimpin-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .grup-pemimpin-no {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #8b5cf6;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .btn-hapus-grup {
+            background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626;
+            border-radius: 6px; padding: 4px 10px; font-size: 12px;
+            cursor: pointer; font-weight: 600; flex-shrink: 0;
+        }
+        .btn-hapus-grup:hover { background: #fca5a5; }
+
+        .petugas-wrap {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #cbd5e1;
+        }
+        .petugas-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .btn-tambah-petugas {
+            background: #eff6ff;
+            border: 1px dashed #93c5fd;
+            color: #1d4ed8;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        .btn-tambah-petugas:hover { background: #dbeafe; border-style: solid; }
+
+        .btn-tambah-grup {
+            background: #2563eb;
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            padding: 11px 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+            box-shadow: 0 3px 8px rgba(37,99,235,0.25);
+        }
+        .btn-tambah-grup:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+        .petugas-list { margin-top: 8px; }
+        .petugas-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            color: #1d4ed8;
+            border-radius: 20px;
+            padding: 4px 10px 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 0 6px 6px 0;
+        }
+        .petugas-chip button {
+            background: none; border: none; color: #1d4ed8;
+            cursor: pointer; font-size: 14px; font-weight: 700;
+            line-height: 1; padding: 0 2px;
+        }
+        .petugas-chip button:hover { color: #dc2626; }
+
+        /* Ringkasan */
+        .ringkas-item {
+            border-left: 4px solid #3b82f6;
+            background: #f0f9ff;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .ringkas-item .judul { font-weight: 700; color: #1e293b; }
+        .ringkas-item .petugas-teks { color: #475569; font-size: 12px; margin-top: 3px; }
+
         /* TERPILIH */
         .terpilih-section { margin-top: 15px; }
         .terpilih-item {
@@ -369,27 +489,27 @@
             </div>
         </div>
 
-        <!-- ================= BAGIAN 3: PEGAWAI ================= -->
+        <!-- ================= BAGIAN 3: PEMIMPIN & PETUGAS ================= -->
         <div class="form-section no-print" id="pegawaiSection" style="display:none;">
             <h3 class="step-title step-3">
-                <span class="num">3</span> Pilih Pegawai yang Ditugaskan
+                <span class="num">3</span> Pilih Pemimpin &amp; Petugas yang Meliput
             </h3>
-            <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 12px;">
-                Klik nama pegawai untuk menambahkan. Klik lagi untuk membatalkan.
+            <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 14px;">
+                Pilih dulu <b>siapa yang diliput/diikuti</b> (mis. Ketua DPRD Supian HK), lalu tambahkan
+                <b>petugas yang meliput</b>. Bisa ditambahkan beberapa pemimpin sekaligus.
             </p>
 
-            <div class="pegawai-picker">
-                <div class="pegawai-picker-header">
-                    <input type="text" id="searchPegawai" placeholder="Cari nama atau jabatan..." oninput="filterPegawaiPicker()">
-                    <span style="font-size: 12px; color: #94a3b8; flex-shrink: 0;" id="countPegawai">Memuat...</span>
-                </div>
-                <div class="pegawai-list" id="pegawaiList"></div>
-            </div>
+            <!-- Grup pemimpin + petugas (diisi oleh JS) -->
+            <div id="grupPemimpinWrap"></div>
 
-            <!-- TERPILIH -->
-            <div class="terpilih-section" id="terpilihSection" style="display:none;">
+            <button type="button" class="btn-tambah-grup" onclick="tambahGrupPemimpin()">
+                &#10133; Tambahkan Pemimpin / Kegiatan Lain
+            </button>
+
+            <!-- DAFTAR RINGKASAN -->
+            <div class="terpilih-section" id="terpilihSection" style="display:none; margin-top:16px;">
                 <div style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 8px;">
-                    &#10003; Terpilih (<span id="countTerpilih">0</span> orang)
+                    &#10003; Ringkasan Penugasan
                 </div>
                 <div id="terpilihList"></div>
             </div>
@@ -444,8 +564,10 @@
     <div id="printTemplate" class="print-only"></div>
 
     <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script src="Javascript/notadinas.js"></script>
     <script src="Javascript/Cetak/cetak_kopsurat.js"></script>
+    <script src="Javascript/Cetak/cetak_notadinas_util.js"></script>
     <script src="Javascript/Cetak/cetak_notadinas_sosper.js"></script>
     <script src="Javascript/Cetak/cetak_notadinas_sosrev.js"></script>
     <script src="Javascript/Cetak/cetak_notadinas_komisi_dd.js"></script>
