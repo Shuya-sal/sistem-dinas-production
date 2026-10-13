@@ -258,14 +258,37 @@ $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereCond
         }
 
         if ($limit_param === 'badges' || $limit_param === 'summary') {
-            // Daftar UI hanya membutuhkan kolom ringkas. Jangan memakai SELECT *
-            // karena foto Base64 dan data profil lain dapat membuat respons sangat besar
-            // dan terputus pada shared hosting.
-            $sql = "SELECT id, nama, nip, jabatan, golongan, bagian, status,
+            // Pastikan kolom profil lengkap tersedia (dipakai PAKTA INTEGRITAS).
+            // Idempotent: hanya menambah kolom yang belum ada.
+            $kolom_wajib = [
+                'nik'          => "ALTER TABLE pegawai ADD COLUMN nik VARCHAR(32) DEFAULT ''",
+                'tempat_lahir' => "ALTER TABLE pegawai ADD COLUMN tempat_lahir VARCHAR(100) DEFAULT ''",
+                'tgl_lahir'    => "ALTER TABLE pegawai ADD COLUMN tgl_lahir DATE DEFAULT NULL",
+                'alamat'       => "ALTER TABLE pegawai ADD COLUMN alamat TEXT",
+            ];
+            foreach ($kolom_wajib as $nama_kolom => $ddl) {
+                $cek_kolom = $conn->query("SHOW COLUMNS FROM pegawai LIKE '" . $conn->real_escape_string($nama_kolom) . "'");
+                if ($cek_kolom && $cek_kolom->num_rows === 0) {
+                    $conn->query($ddl);
+                }
+            }
+
+            $kolom_summary = "id, nama, nip, jabatan, golongan, bagian, status,
                nik, tempat_lahir, tgl_lahir, alamat,
-               foto, tingkat, is_donatur, is_sangean
+               foto, tingkat, is_donatur, is_sangean";
+
+            $sql = "SELECT $kolom_summary
         FROM pegawai $whereClause ORDER BY nama ASC";
 $list_stmt = $conn->prepare($sql);
+            if (!$list_stmt) {
+                // Fallback: kolom profil belum ada → pakai kolom inti saja,
+                // supaya halaman tidak blank.
+                $kolom_summary = "id, nama, nip, jabatan, golongan, bagian, status,
+               foto, tingkat, is_donatur, is_sangean";
+                $sql = "SELECT $kolom_summary
+        FROM pegawai $whereClause ORDER BY nama ASC";
+                $list_stmt = $conn->prepare($sql);
+            }
 if (!empty($whereConditions)) { $list_stmt->bind_param($whereTypes, ...$whereParams); }
 $list_stmt->execute();
 $result = $list_stmt->get_result();
