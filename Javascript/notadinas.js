@@ -185,20 +185,23 @@ function renderPegawaiList(list) {
     var container = document.getElementById('pegawaiList');
     if (!container) return;
     if (!list || list.length === 0) {
-        container.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">Tidak ada pegawai ditemukan.</div>';
+        container.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px; grid-column:1/-1;">Tidak ada pegawai ditemukan.</div>';
         return;
     }
     container.innerHTML = list.map(function(p){
         var selected = ndPegawai.some(function(x){ return x.id === p.id; });
         var idx = ndMaster.indexOf(p);
+        var foto = p.foto || 'Image/default.jpg';
         return '<div class="pegawai-item' + (selected ? ' selected' : '') + '" ' +
                'onclick="togglePegawai(' + idx + ')">' +
-               '<img src="' + ndEsc(p.foto) + '" onerror="this.src=\'Image/default.jpg\'" alt="">' +
+               '<img src="' + ndEsc(foto) + '" alt="Foto ' + ndEsc(p.nama) + '" ' +
+               'loading="lazy" width="44" height="44" ' +
+               'onerror="this.onerror=null;this.src=\'Image/default.jpg\'">' +
                '<div class="pegawai-item-info">' +
                '<div class="pegawai-item-nama">' + ndEsc(p.nama) + '</div>' +
                '<div class="pegawai-item-jabatan">' + ndEsc(p.jabatan) + '</div>' +
                '</div>' +
-               (selected ? '<span style="color:#3b82f6; font-size:18px;">&#10003;</span>' : '') +
+               (selected ? '<span class="cek">&#10003;</span>' : '') +
                '</div>';
     }).join('');
 }
