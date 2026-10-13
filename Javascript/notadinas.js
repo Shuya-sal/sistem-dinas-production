@@ -65,6 +65,10 @@ function initNotaDinasSPA() {
     var tglEl = document.getElementById('tanggalND');
     if (tglEl && !tglEl.value) tglEl.value = new Date().toISOString().slice(0,10);
 
+    // Muat data master (pegawai + tujuan) begitu halaman dibuka,
+    // supaya dropdown langsung terisi saat user memilih tipe/kategori.
+    loadMasterNd();
+
     loadRiwayatNotaDinas();
 }
 window.initNotaDinasSPA = initNotaDinasSPA;
@@ -511,9 +515,24 @@ function pilihKategori(val) {
     });
 }
 
-// Bangun ulang grup: hapus semua, tambah baru dengan mode+data terkini
+// Bangun ulang grup: hapus semua, tambah baru dengan mode+data terkini.
+// Kalau data master belum siap, tunggu dulu supaya dropdown TIDAK kosong.
 function bangunUlangGrupPemilih() {
     var wrap = document.getElementById('grupPemimpinWrap');
+    if (ndMaster.length === 0) {
+        // Data belum termuat → tunggu maksimal ~5 detik, lalu bangun
+        var coba = 0;
+        var t = setInterval(function(){
+            coba++;
+            if (ndMaster.length > 0 || coba > 16) {
+                clearInterval(t);
+                if (wrap) wrap.innerHTML = '';
+                tambahGrupPemimpin();
+                renderRingkasan();
+            }
+        }, 300);
+        return;
+    }
     if (wrap) wrap.innerHTML = '';
     tambahGrupPemimpin();
     renderRingkasan();
